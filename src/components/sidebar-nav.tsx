@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect, type ComponentType } from "react"; // Added useState, useEffect
+import { useState, useEffect, type ComponentType } from "react";
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -15,10 +15,13 @@ import {
   StickyNote,
   GalleryVertical,
   Milestone,
-  Wand2,
+  Wand2, // Correct icon for Love Letter AI
   type LucideProps,
+  FileText, // Example for skeleton
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+
 
 interface NavItem {
   href: string;
@@ -45,34 +48,48 @@ export function SidebarNav() {
 
   return (
     <SidebarMenu>
-      {navItems.map((item) => {
-        // Defer active state calculation until client has mounted
-        const active = isClient ? pathname === item.href : false;
-        
-        return (
-          <SidebarMenuItem key={item.label}>
-            <Link href={item.href}>
+      {isClient
+        ? navItems.map((item) => {
+            const active = pathname === item.href;
+            return (
+              <SidebarMenuItem key={item.label}>
+                <Link href={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    className={cn(
+                      "font-body",
+                      active
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
+                        : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    )}
+                    isActive={active}
+                    tooltip={item.label}
+                  >
+                    {/* Wrap icon and label in a span. This span becomes the direct child of Slot. */}
+                    <span>
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.label}</span>
+                    </span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            );
+          })
+        : navItems.map((item, index) => ( // Render placeholders/skeletons on server and initial client render
+            <SidebarMenuItem key={`skeleton-${item.label}-${index}`}>
               <SidebarMenuButton
-                asChild
-                className={cn(
-                  "font-body",
-                  active // Use the client-aware active state
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
-                    : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                )}
-                isActive={active} // Pass the client-aware active state
+                className={cn("font-body")}
+                isActive={false}
                 tooltip={item.label}
+                asChild // Important for skeleton structure if SidebarMenuButton expects single child
               >
-                {/* Wrap icon and label in a span. This span becomes the direct child of Slot. */}
                 <span>
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.label}</span>
+                  <Skeleton className="h-5 w-5 rounded" />
+                  <Skeleton className="ml-2 h-4 w-[80px] rounded" />
                 </span>
               </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-        );
-      })}
+            </SidebarMenuItem>
+          ))}
     </SidebarMenu>
   );
 }
