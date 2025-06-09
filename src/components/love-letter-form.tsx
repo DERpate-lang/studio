@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -22,6 +23,8 @@ const FormSchema = z.object({
 
 type FormData = z.infer<typeof FormSchema>;
 
+const LOCAL_STORAGE_KEY = "loveLetterFormData";
+
 export function LoveLetterForm() {
   const [generatedLetter, setGeneratedLetter] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,9 +35,38 @@ export function LoveLetterForm() {
     handleSubmit,
     formState: { errors },
     reset,
+    watch, // get watch from useForm
   } = useForm<FormData>({
     resolver: zodResolver(FormSchema),
+    defaultValues: { // Initialize with empty strings
+      relationshipHistory: "",
+      loveNotes: "",
+      occasion: "",
+    }
   });
+
+  // Load saved data from localStorage on component mount
+  useEffect(() => {
+    const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData) as FormData;
+        reset(parsedData); // Populate form with saved data
+      } catch (error) {
+        console.error("Error parsing saved love letter form data:", error);
+        // Optionally, clear invalid data from localStorage
+        // localStorage.removeItem(LOCAL_STORAGE_KEY);
+      }
+    }
+  }, [reset]);
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    const subscription = watch((value) => {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(value));
+    });
+    return () => subscription.unsubscribe(); // Clean up subscription
+  }, [watch]);
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     setIsLoading(true);
@@ -54,6 +86,13 @@ export function LoveLetterForm() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleClearForm = () => {
+    reset({ relationshipHistory: "", loveNotes: "", occasion: "" }); // Reset form to empty
+    localStorage.removeItem(LOCAL_STORAGE_KEY); // Clear stored data
+    setGeneratedLetter(null); // Also clear any generated letter
+    toast({ title: "Form Cleared", description: "Your input and any generated letter have been cleared." });
   };
 
   return (
@@ -104,7 +143,7 @@ export function LoveLetterForm() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6">
-            <Button type="button" variant="outline" onClick={() => reset()} className="w-full sm:w-auto font-body border-primary text-primary hover:bg-primary/10">
+            <Button type="button" variant="outline" onClick={handleClearForm} className="w-full sm:w-auto font-body border-primary text-primary hover:bg-primary/10">
               Clear Form
             </Button>
             <Button type="submit" disabled={isLoading} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-body">
