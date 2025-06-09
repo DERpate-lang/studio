@@ -12,19 +12,19 @@ body {
     --background: 0 0% 0%; /* Black */
     --foreground: 0 0% 100%; /* White */
 
-    --card: 0 0% 7%; /* Very dark grey (slightly off-black) */
+    --card: 0 0% 0%; /* Black */
     --card-foreground: 0 0% 100%; /* White */
 
-    --popover: 0 0% 7%; /* Very dark grey */
+    --popover: 0 0% 0%; /* Black */
     --popover-foreground: 0 0% 100%; /* White */
 
     --primary: 169 56% 78%; /* Light Teal #a3ebe0 */
     --primary-foreground: 0 0% 0%; /* Black (for text on teal buttons) */
 
-    --secondary: 0 0% 10%; /* Dark grey */
+    --secondary: 0 0% 0%; /* Black */
     --secondary-foreground: 0 0% 100%; /* White */
 
-    --muted: 0 0% 15%; /* Dark grey */
+    --muted: 0 0% 0%; /* Black */
     --muted-foreground: 0 0% 65%; /* Light grey */
 
     --accent: 169 56% 78%; /* Light Teal #a3ebe0 */
@@ -34,7 +34,7 @@ body {
     --destructive-foreground: 0 0% 100%; /* White */
 
     --border: 0 0% 20%; /* Darker grey border */
-    --input: 0 0% 10%; /* Dark grey input background */
+    --input: 0 0% 0%; /* Black */
     --ring: 169 56% 78%; /* Light Teal #a3ebe0 for focus rings */
     --radius: 0.75rem;
 
@@ -45,7 +45,7 @@ body {
     --chart-5: 27 87% 67%;
 
     /* Sidebar "Light" (Teal Accent on Black) Theme */
-    --sidebar-background: 0 0% 3%; /* Almost Black */
+    --sidebar-background: 0 0% 0%; /* Black */
     --sidebar-foreground: 0 0% 100%; /* White */
     --sidebar-primary: 169 56% 78%; /* Light Teal */
     --sidebar-primary-foreground: 0 0% 0%; /* Black */
@@ -59,19 +59,19 @@ body {
     --background: 0 0% 0%; /* Black */
     --foreground: 0 0% 100%; /* White */
 
-    --card: 0 0% 7%; /* Very dark grey */
+    --card: 0 0% 0%; /* Black */
     --card-foreground: 0 0% 100%; /* White */
 
-    --popover: 0 0% 7%; /* Very dark grey */
+    --popover: 0 0% 0%; /* Black */
     --popover-foreground: 0 0% 100%; /* White */
 
     --primary: 348 48% 73%; /* Pinkish-Red #dd98a6 */
     --primary-foreground: 0 0% 100%; /* White (for text on pink buttons) */
 
-    --secondary: 0 0% 10%; /* Dark grey */
+    --secondary: 0 0% 0%; /* Black */
     --secondary-foreground: 0 0% 100%; /* White */
 
-    --muted: 0 0% 15%; /* Dark grey */
+    --muted: 0 0% 0%; /* Black */
     --muted-foreground: 0 0% 65%; /* Light grey */
 
     --accent: 348 48% 73%; /* Pinkish-Red #dd98a6 */
@@ -81,11 +81,11 @@ body {
     --destructive-foreground: 0 0% 98%; /* Off-white */
 
     --border: 0 0% 20%; /* Darker grey border */
-    --input: 0 0% 10%; /* Dark grey input background */
+    --input: 0 0% 0%; /* Black */
     --ring: 348 48% 73%; /* Pinkish-Red #dd98a6 for focus rings */
 
     /* Sidebar "Dark" (Pink Accent on Black) Theme */
-    --sidebar-background: 0 0% 3%; /* Almost Black */
+    --sidebar-background: 0 0% 0%; /* Black */
     --sidebar-foreground: 0 0% 100%; /* White */
     --sidebar-primary: 348 48% 73%; /* Pinkish-Red */
     --sidebar-primary-foreground: 0 0% 100%; /* White */
