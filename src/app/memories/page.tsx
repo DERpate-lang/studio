@@ -28,12 +28,37 @@ export default function MemoriesPage() {
   useEffect(() => {
     const storedMemories = localStorage.getItem("memories");
     if (storedMemories) {
-      setMemories(JSON.parse(storedMemories).sort((a: Memory, b: Memory) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      try {
+        setMemories(JSON.parse(storedMemories).sort((a: Memory, b: Memory) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      } catch (e) {
+        console.error("Error parsing memories from localStorage", e);
+        // Optionally initialize with empty or default if parsing fails
+        setMemories([]);
+      }
     }
   }, []);
 
-  const saveMemoriesToLocalStorage = (updatedMemories: Memory[]) => {
-    localStorage.setItem("memories", JSON.stringify(updatedMemories));
+  const saveMemoriesToLocalStorage = (updatedMemories: Memory[]): boolean => {
+    try {
+      localStorage.setItem("memories", JSON.stringify(updatedMemories));
+      return true;
+    } catch (error: any) {
+      if (error.name === 'QuotaExceededError' || error.code === 22 || error.code === 1014) {
+        toast({
+          title: "Storage Limit Reached",
+          description: "Your browser's local storage is full. Please remove some memories with photos or try smaller images.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error Saving Memories",
+          description: "Could not save memories to local storage.",
+          variant: "destructive",
+        });
+        console.error("Error saving memories to localStorage:", error);
+      }
+      return false;
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -43,8 +68,14 @@ export default function MemoriesPage() {
   
   const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
+      if (e.target.files[0].size > 5 * 1024 * 1024) { // Basic 5MB check
+        toast({ title: "File Too Large", description: "Please select an image smaller than 5MB.", variant: "destructive"});
+        setSelectedPhotoFile(null);
+        setCurrentMemory(prev => ({ ...prev, photoUrl: undefined, "data-ai-hint": undefined }));
+        if (photoFileInputRef.current) photoFileInputRef.current.value = "";
+        return;
+      }
       setSelectedPhotoFile(e.target.files[0]);
-      // Generate a preview URL immediately for the dialog
       const reader = new FileReader();
       reader.onloadend = () => {
         setCurrentMemory(prev => ({ ...prev, photoUrl: reader.result as string, "data-ai-hint": "uploaded memory image" }));
@@ -52,7 +83,6 @@ export default function MemoriesPage() {
       reader.readAsDataURL(e.target.files[0]);
     } else {
       setSelectedPhotoFile(null);
-      // If file is cleared, remove existing photoUrl from preview in currentMemory
       setCurrentMemory(prev => ({ ...prev, photoUrl: undefined, "data-ai-hint": undefined }));
     }
   };
@@ -65,54 +95,52 @@ export default function MemoriesPage() {
     }
   }
 
-  const processSubmit = (photoDataUrl?: string) => {
+  const processSubmit = (photoDataUrlForNewMemory?: string) => {
     if (!currentMemory.title || !currentMemory.date || !currentMemory.description) {
       toast({ title: "Error", description: "Please fill in title, date, and description.", variant: "destructive" });
       setIsLoading(false);
       return;
     }
 
-    let updatedMemories;
-    const memoryData: Partial<Memory> = {
-      ...currentMemory,
-      photoUrl: photoDataUrl || currentMemory.photoUrl, // Use new data URL if provided, else existing
-      "data-ai-hint": (photoDataUrl || currentMemory.photoUrl) ? (currentMemory["data-ai-hint"] || "uploaded memory image") : undefined,
-    };
+    let updatedMemoriesList;
     
-    // Ensure photoUrl is undefined if it's an empty string.
-    if (memoryData.photoUrl === "") {
-        memoryData.photoUrl = undefined;
-        memoryData["data-ai-hint"] = undefined;
-    }
-
-
     if (isEditing && currentMemory.id) {
-      updatedMemories = memories.map(mem => mem.id === currentMemory.id ? { ...mem, ...memoryData } as Memory : mem);
-      toast({ title: "Success", description: "Memory updated successfully!" });
+      updatedMemoriesList = memories.map(mem => 
+        mem.id === currentMemory.id ? 
+        { 
+          ...mem, 
+          ...currentMemory, 
+          photoUrl: selectedPhotoFile ? photoDataUrlForNewMemory : currentMemory.photoUrl, // Use new if selected, else existing
+          "data-ai-hint": (selectedPhotoFile ? photoDataUrlForNewMemory : currentMemory.photoUrl) ? (currentMemory["data-ai-hint"] || "uploaded memory image") : undefined,
+        } as Memory 
+        : mem
+      );
     } else {
       const newMemory: Memory = {
         id: Date.now().toString(),
-        title: memoryData.title!,
-        date: memoryData.date!,
-        description: memoryData.description!,
-        photoUrl: memoryData.photoUrl,
-        "data-ai-hint": memoryData["data-ai-hint"],
+        title: currentMemory.title!,
+        date: currentMemory.date!,
+        description: currentMemory.description!,
+        photoUrl: photoDataUrlForNewMemory, // This comes from selectedPhotoFile if it exists
+        "data-ai-hint": photoDataUrlForNewMemory ? (currentMemory["data-ai-hint"] || "uploaded memory image") : undefined,
       };
-      updatedMemories = [newMemory, ...memories];
-      toast({ title: "Success", description: "Memory added successfully!" });
+      updatedMemoriesList = [newMemory, ...memories];
     }
     
-    updatedMemories.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setMemories(updatedMemories);
-    saveMemoriesToLocalStorage(updatedMemories);
-    
-    resetFormAndDialog();
+    updatedMemoriesList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    if (saveMemoriesToLocalStorage(updatedMemoriesList)) {
+        setMemories(updatedMemoriesList);
+        toast({ title: "Success", description: isEditing ? "Memory updated successfully!" : "Memory added successfully!" });
+        resetFormAndDialog();
+    }
+    // If saving fails, the toast is shown by saveMemoriesToLocalStorage
     setIsLoading(false);
   }
 
   const handleSubmit = () => {
     setIsLoading(true);
-    if (selectedPhotoFile) {
+    if (selectedPhotoFile) { // If a new file was selected (for add or edit)
       const reader = new FileReader();
       reader.onloadend = () => {
         processSubmit(reader.result as string);
@@ -122,9 +150,8 @@ export default function MemoriesPage() {
         setIsLoading(false);
       }
       reader.readAsDataURL(selectedPhotoFile);
-    } else {
-      // No new file selected, process with existing currentMemory.photoUrl (could be undefined, or an old dataURI)
-      processSubmit(currentMemory.photoUrl);
+    } else { // No new file selected (could be editing existing text fields, or adding without photo)
+      processSubmit(currentMemory.photoUrl); // Pass existing photoUrl (if any)
     }
   };
 
@@ -146,8 +173,8 @@ export default function MemoriesPage() {
   };
 
   const openEditDialog = (memory: Memory) => {
-    setCurrentMemory(memory); // photoUrl will be existing data URI or undefined
-    setSelectedPhotoFile(null); // No new file selected yet for editing
+    setCurrentMemory(memory); 
+    setSelectedPhotoFile(null); 
     setIsEditing(true);
     setIsDialogOpen(true);
   };
@@ -155,9 +182,13 @@ export default function MemoriesPage() {
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this memory?")) {
       const updatedMemories = memories.filter(mem => mem.id !== id);
-      setMemories(updatedMemories);
-      saveMemoriesToLocalStorage(updatedMemories);
-      toast({ title: "Success", description: "Memory deleted." });
+      if(saveMemoriesToLocalStorage(updatedMemories)){
+        setMemories(updatedMemories);
+        toast({ title: "Success", description: "Memory deleted." });
+      } else {
+        setMemories(updatedMemories); // Keep UI consistent
+         toast({ title: "Info", description: "Memory removed from view. Storage update may have failed.", variant: "default"});
+      }
     }
   };
   
@@ -165,7 +196,7 @@ export default function MemoriesPage() {
   return (
     <PageContainer title="Our Cherished Memories">
       <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
-        if (!isOpen) { // Reset form when dialog is closed
+        if (!isOpen) { 
           resetFormAndDialog();
         }
         setIsDialogOpen(isOpen);
@@ -206,7 +237,7 @@ export default function MemoriesPage() {
                     </Button>
                   </div>
                 )}
-                 {!currentMemory.photoUrl && selectedPhotoFile && (
+                 {!currentMemory.photoUrl && selectedPhotoFile && ( // Preview for newly selected file before it's set in currentMemory.photoUrl
                    <Image src={URL.createObjectURL(selectedPhotoFile)} alt="Preview" width={100} height={100} className="rounded-md aspect-square object-cover" />
                  )}
               </div>

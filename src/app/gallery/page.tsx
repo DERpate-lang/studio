@@ -8,13 +8,12 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { PlusCircle, Loader2, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { MusicPlayer } from "@/components/music-player";
 import DecorativeBorder from "@/components/decorative-border";
-import { Card, CardContent } from "@/components/ui/card"; // Added Trash2
-import { Trash2 } from 'lucide-react';
+import { Card, CardContent } from "@/components/ui/card";
 
 
 const initialPhotos: Photo[] = [
@@ -36,19 +35,51 @@ export default function GalleryPage() {
   useEffect(() => {
     const storedPhotos = localStorage.getItem("galleryPhotos");
     if (storedPhotos) {
-      setPhotos(JSON.parse(storedPhotos));
+      try {
+        setPhotos(JSON.parse(storedPhotos));
+      } catch (e) {
+        console.error("Error parsing photos from localStorage", e);
+        setPhotos(initialPhotos); // Fallback to initial if parsing fails
+        localStorage.setItem("galleryPhotos", JSON.stringify(initialPhotos));
+      }
     } else {
       setPhotos(initialPhotos);
       localStorage.setItem("galleryPhotos", JSON.stringify(initialPhotos));
     }
   }, []);
 
-  const savePhotosToLocalStorage = (updatedPhotos: Photo[]) => {
-    localStorage.setItem("galleryPhotos", JSON.stringify(updatedPhotos));
+  const savePhotosToLocalStorage = (updatedPhotos: Photo[]): boolean => {
+    try {
+      localStorage.setItem("galleryPhotos", JSON.stringify(updatedPhotos));
+      return true;
+    } catch (error: any) {
+      if (error.name === 'QuotaExceededError' || error.code === 22 || error.code === 1014) { // DOMException code for quota exceeded
+        toast({
+          title: "Storage Limit Reached",
+          description: "Your browser's local storage is full. Please remove some photos or try smaller images.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error Saving Photos",
+          description: "Could not save photos to local storage.",
+          variant: "destructive",
+        });
+        console.error("Error saving photos to localStorage:", error);
+      }
+      return false;
+    }
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
+      // Basic check for file size (e.g., 5MB limit before even trying to read)
+      if (event.target.files[0].size > 5 * 1024 * 1024) { 
+        toast({ title: "File Too Large", description: "Please select an image smaller than 5MB.", variant: "destructive"});
+        setSelectedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
       setSelectedFile(event.target.files[0]);
     } else {
       setSelectedFile(null);
@@ -70,16 +101,19 @@ export default function GalleryPage() {
         dateAdded: new Date().toISOString(),
         "data-ai-hint": "uploaded image"
       };
-      const updatedPhotos = [photoToAdd, ...photos];
-      setPhotos(updatedPhotos);
-      savePhotosToLocalStorage(updatedPhotos);
-      toast({ title: "Success", description: "Photo added to gallery!" });
-      setSelectedFile(null);
-      setNewPhotoCaption("");
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""; // Reset file input
+      const potentialUpdatedPhotos = [photoToAdd, ...photos];
+      
+      if (savePhotosToLocalStorage(potentialUpdatedPhotos)) {
+        setPhotos(potentialUpdatedPhotos);
+        toast({ title: "Success", description: "Photo added to gallery!" });
+        setSelectedFile(null);
+        setNewPhotoCaption("");
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ""; 
+        }
+        setIsDialogOpen(false);
       }
-      setIsDialogOpen(false);
+      // If savePhotosToLocalStorage fails, it shows its own toast.
       setIsLoading(false);
     };
     reader.onerror = () => {
@@ -92,9 +126,16 @@ export default function GalleryPage() {
   const handleDeletePhoto = (id: string) => {
     if (confirm("Are you sure you want to delete this photo?")) {
       const updatedPhotos = photos.filter(p => p.id !== id);
-      setPhotos(updatedPhotos);
-      savePhotosToLocalStorage(updatedPhotos);
-      toast({ title: "Success", description: "Photo removed from gallery." });
+      if (savePhotosToLocalStorage(updatedPhotos)) {
+        setPhotos(updatedPhotos);
+        toast({ title: "Success", description: "Photo removed from gallery." });
+      } else {
+        // If saving fails (e.g. quota still somehow an issue, unlikely on delete),
+        // at least the UI is updated. User might need to retry or refresh.
+        // For robustness, one might revert UI state here, but for deletion, it's often acceptable.
+        setPhotos(updatedPhotos); // Keep UI consistent with intent
+        toast({ title: "Info", description: "Photo removed from view. Storage update may have failed if limit was hit.", variant: "default"});
+      }
     }
   };
 
@@ -163,8 +204,9 @@ export default function GalleryPage() {
             <Image
               src={photo.url}
               alt={photo.caption || "Gallery image"}
-              layout="fill"
-              objectFit="cover"
+              fill // Use fill instead of layout="fill"
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw" // Provide sizes for fill
+              style={{ objectFit: "cover" }} // Use style for objectFit
               className="transition-transform duration-500 group-hover:scale-110"
               data-ai-hint={(photo as any)['data-ai-hint'] || "gallery image"}
               unoptimized={photo.url.startsWith('data:image')} /* Allow data URIs */
@@ -189,4 +231,3 @@ export default function GalleryPage() {
     </PageContainer>
   );
 }
-
