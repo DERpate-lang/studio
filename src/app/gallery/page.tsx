@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect }_ from "react";
+import { useState, useEffect } from "react";
 import type { Photo } from "@/lib/types";
 import { PageContainer } from "@/components/page-container";
 import Image from "next/image";
