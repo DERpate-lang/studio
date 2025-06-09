@@ -32,7 +32,6 @@ export default function MemoriesPage() {
         setMemories(JSON.parse(storedMemories).sort((a: Memory, b: Memory) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       } catch (e) {
         console.error("Error parsing memories from localStorage", e);
-        // Optionally initialize with empty or default if parsing fails
         setMemories([]);
       }
     }
@@ -65,10 +64,9 @@ export default function MemoriesPage() {
     const { name, value } = e.target;
     setCurrentMemory(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      // Removed file size check here
       setSelectedPhotoFile(e.target.files[0]);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -97,16 +95,16 @@ export default function MemoriesPage() {
     }
 
     let updatedMemoriesList;
-    
+
     if (isEditing && currentMemory.id) {
-      updatedMemoriesList = memories.map(mem => 
-        mem.id === currentMemory.id ? 
-        { 
-          ...mem, 
-          ...currentMemory, 
-          photoUrl: selectedPhotoFile ? photoDataUrlForNewMemory : currentMemory.photoUrl, // Use new if selected, else existing
+      updatedMemoriesList = memories.map(mem =>
+        mem.id === currentMemory.id ?
+        {
+          ...mem,
+          ...currentMemory,
+          photoUrl: selectedPhotoFile ? photoDataUrlForNewMemory : currentMemory.photoUrl,
           "data-ai-hint": (selectedPhotoFile ? photoDataUrlForNewMemory : currentMemory.photoUrl) ? (currentMemory["data-ai-hint"] || "uploaded memory image") : undefined,
-        } as Memory 
+        } as Memory
         : mem
       );
     } else {
@@ -115,12 +113,12 @@ export default function MemoriesPage() {
         title: currentMemory.title!,
         date: currentMemory.date!,
         description: currentMemory.description!,
-        photoUrl: photoDataUrlForNewMemory, // This comes from selectedPhotoFile if it exists
+        photoUrl: photoDataUrlForNewMemory,
         "data-ai-hint": photoDataUrlForNewMemory ? (currentMemory["data-ai-hint"] || "uploaded memory image") : undefined,
       };
       updatedMemoriesList = [newMemory, ...memories];
     }
-    
+
     updatedMemoriesList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     if (saveMemoriesToLocalStorage(updatedMemoriesList)) {
@@ -128,13 +126,12 @@ export default function MemoriesPage() {
         toast({ title: "Success", description: isEditing ? "Memory updated successfully!" : "Memory added successfully!" });
         resetFormAndDialog();
     }
-    // If saving fails, the toast is shown by saveMemoriesToLocalStorage
     setIsLoading(false);
   }
 
   const handleSubmit = () => {
     setIsLoading(true);
-    if (selectedPhotoFile) { // If a new file was selected (for add or edit)
+    if (selectedPhotoFile) {
       const reader = new FileReader();
       reader.onloadend = () => {
         processSubmit(reader.result as string);
@@ -144,8 +141,8 @@ export default function MemoriesPage() {
         setIsLoading(false);
       }
       reader.readAsDataURL(selectedPhotoFile);
-    } else { // No new file selected (could be editing existing text fields, or adding without photo)
-      processSubmit(currentMemory.photoUrl); // Pass existing photoUrl (if any)
+    } else {
+      processSubmit(currentMemory.photoUrl);
     }
   };
 
@@ -167,8 +164,8 @@ export default function MemoriesPage() {
   };
 
   const openEditDialog = (memory: Memory) => {
-    setCurrentMemory(memory); 
-    setSelectedPhotoFile(null); 
+    setCurrentMemory(memory);
+    setSelectedPhotoFile(null);
     setIsEditing(true);
     setIsDialogOpen(true);
   };
@@ -176,21 +173,21 @@ export default function MemoriesPage() {
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this memory?")) {
       const updatedMemories = memories.filter(mem => mem.id !== id);
+      setMemories(updatedMemories); // Update UI immediately
+
       if(saveMemoriesToLocalStorage(updatedMemories)){
-        setMemories(updatedMemories);
-        toast({ title: "Success", description: "Memory deleted." });
-      } else {
-        setMemories(updatedMemories); // Keep UI consistent
-         toast({ title: "Info", description: "Memory removed from view. Storage update may have failed.", variant: "default"});
+        toast({ title: "Success", description: "Memory deleted and changes saved." });
       }
+      // If saveMemoriesToLocalStorage fails, it has already shown an error toast.
+      // UI is updated for the current session.
     }
   };
-  
+
 
   return (
     <PageContainer title="Our Cherished Memories">
       <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
-        if (!isOpen) { 
+        if (!isOpen) {
           resetFormAndDialog();
         }
         setIsDialogOpen(isOpen);
@@ -231,20 +228,20 @@ export default function MemoriesPage() {
                     </Button>
                   </div>
                 )}
-                 {!currentMemory.photoUrl && selectedPhotoFile && ( // Preview for newly selected file before it's set in currentMemory.photoUrl
+                 {!currentMemory.photoUrl && selectedPhotoFile && (
                    <Image src={URL.createObjectURL(selectedPhotoFile)} alt="Preview" width={100} height={100} className="rounded-md aspect-square object-cover" />
                  )}
               </div>
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="dataAiHint" className="text-right text-foreground/80">AI Hint</Label>
-                <Input 
-                    id="dataAiHint" 
-                    name="data-ai-hint" 
-                    value={currentMemory["data-ai-hint"] || ""} 
-                    onChange={handleInputChange} 
-                    className="col-span-3" 
-                    placeholder="e.g. couple beach (max 2 words)" 
+                <Input
+                    id="dataAiHint"
+                    name="data-ai-hint"
+                    value={currentMemory["data-ai-hint"] || ""}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    placeholder="e.g. couple beach (max 2 words)"
                 />
             </div>
           </div>
@@ -274,4 +271,3 @@ export default function MemoriesPage() {
     </PageContainer>
   );
 }
-

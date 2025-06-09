@@ -25,19 +25,19 @@ export default function GalleryPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [newPhotoCaption, setNewPhotoCaption] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isClient, setIsClient] = useState(false); // Added for client-side only rendering
+  const [isClient, setIsClient] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    setIsClient(true); // Set client flag on mount
+    setIsClient(true);
     const storedPhotos = localStorage.getItem("galleryPhotos");
     if (storedPhotos) {
       try {
         setPhotos(JSON.parse(storedPhotos));
       } catch (e) {
         console.error("Error parsing photos from localStorage", e);
-        setPhotos(initialPhotos); 
+        setPhotos(initialPhotos);
         localStorage.setItem("galleryPhotos", JSON.stringify(initialPhotos));
       }
     } else {
@@ -51,7 +51,7 @@ export default function GalleryPage() {
       localStorage.setItem("galleryPhotos", JSON.stringify(updatedPhotos));
       return true;
     } catch (error: any) {
-      if (error.name === 'QuotaExceededError' || error.code === 22 || error.code === 1014) { 
+      if (error.name === 'QuotaExceededError' || error.code === 22 || error.code === 1014) {
         toast({
           title: "Storage Limit Reached",
           description: "Your browser's local storage is full. Please remove some photos or try smaller images.",
@@ -98,7 +98,7 @@ export default function GalleryPage() {
         };
         reader.onerror = () => {
           toast({ title: "Error Reading File", description: `Failed to read ${file.name}.`, variant: "destructive" });
-          resolve(null); 
+          resolve(null);
         };
         reader.readAsDataURL(file);
       });
@@ -109,37 +109,43 @@ export default function GalleryPage() {
       const successfullyReadPhotos = results.filter(photo => photo !== null) as Photo[];
 
       if (successfullyReadPhotos.length === 0 && selectedFiles.length > 0) {
-        toast({ title: "No Photos Processed", description: "Could not process any of the selected files (check for errors above).", variant: "default" });
+        toast({ title: "No Photos Processed", description: "Could not process any of the selected files.", variant: "default" });
         setIsLoading(false);
         return;
       }
-      
+
       if (successfullyReadPhotos.length > 0) {
         const potentialUpdatedPhotos = [...successfullyReadPhotos, ...photos];
         if (savePhotosToLocalStorage(potentialUpdatedPhotos)) {
           setPhotos(potentialUpdatedPhotos);
           toast({ title: "Success", description: `${successfullyReadPhotos.length} photo(s) added to gallery!` });
-          setIsDialogOpen(false); 
+          setIsDialogOpen(false);
         }
       }
-    } catch (error) { 
+    } catch (error) {
       console.error("Error processing files batch:", error);
       toast({ title: "Batch Error", description: "An unexpected error occurred while processing photos.", variant: "destructive" });
     } finally {
       setIsLoading(false);
+      // Reset file input and caption after attempting to add
+      setSelectedFiles([]);
+      setNewPhotoCaption("");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
   const handleDeletePhoto = (id: string) => {
     if (confirm("Are you sure you want to delete this photo?")) {
       const updatedPhotos = photos.filter(p => p.id !== id);
+      setPhotos(updatedPhotos); // Update UI immediately
+
       if (savePhotosToLocalStorage(updatedPhotos)) {
-        setPhotos(updatedPhotos);
-        toast({ title: "Success", description: "Photo removed from gallery." });
-      } else {
-        setPhotos(updatedPhotos); 
-        toast({ title: "Info", description: "Photo removed from view. Storage update may have failed if limit was hit.", variant: "default"});
+        toast({ title: "Success", description: "Photo removed from gallery and changes saved." });
       }
+      // If savePhotosToLocalStorage returns false, it has already shown an error toast.
+      // The UI is updated for the current session regardless.
     }
   };
 
@@ -147,7 +153,7 @@ export default function GalleryPage() {
   return (
     <PageContainer title="Our Photo Gallery">
       <div className="mb-8">
-        <MusicPlayer />
+        {isClient && <MusicPlayer />}
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
@@ -208,7 +214,7 @@ export default function GalleryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {photos.length === 0 ? (
          <DecorativeBorder className="text-center">
             <p className="font-body text-lg text-foreground/70 p-8">Your gallery is empty. Add some photos to start your visual journey!</p>
@@ -220,21 +226,21 @@ export default function GalleryPage() {
             <Image
               src={photo.url}
               alt={photo.caption || "Gallery image"}
-              fill 
-              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw" 
-              style={{ objectFit: "cover" }} 
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              style={{ objectFit: "cover" }}
               className="transition-transform duration-500 group-hover:scale-110"
               data-ai-hint={(photo as any)['data-ai-hint'] || "gallery image"}
-              unoptimized={photo.url.startsWith('data:image')} 
+              unoptimized={photo.url.startsWith('data:image')}
             />
             {photo.caption && (
               <div className="absolute inset-x-0 bottom-0 bg-black/50 p-2 text-center">
                 <p className="text-sm text-white font-body truncate">{photo.caption}</p>
               </div>
             )}
-            <Button 
-              variant="destructive" 
-              size="icon" 
+            <Button
+              variant="destructive"
+              size="icon"
               className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-8 w-8"
               onClick={() => handleDeletePhoto(photo.id)}
             >

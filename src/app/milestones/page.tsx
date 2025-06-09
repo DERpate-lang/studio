@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -31,19 +32,36 @@ export default function MilestonesPage() {
   useEffect(() => {
     const storedMilestones = localStorage.getItem("milestones");
     if (storedMilestones) {
-      setMilestones(JSON.parse(storedMilestones).sort((a: Milestone, b: Milestone) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      try {
+        setMilestones(JSON.parse(storedMilestones).sort((a: Milestone, b: Milestone) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      } catch (e) {
+        console.error("Error parsing milestones from localStorage", e);
+        setMilestones([]);
+      }
     }
   }, []);
 
-  const saveMilestonesToLocalStorage = (updatedMilestones: Milestone[]) => {
-    localStorage.setItem("milestones", JSON.stringify(updatedMilestones));
+  const saveMilestonesToLocalStorage = (updatedMilestones: Milestone[]): boolean => {
+     try {
+      localStorage.setItem("milestones", JSON.stringify(updatedMilestones));
+      return true;
+    } catch (error: any) {
+      // Basic error handling, can be expanded
+      toast({
+        title: "Storage Error",
+        description: "Could not save milestones to local storage. Your browser storage might be full.",
+        variant: "destructive",
+      });
+      console.error("Error saving milestones to localStorage:", error);
+      return false;
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setCurrentMilestone(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handleIconChange = (value: string) => {
     setCurrentMilestone(prev => ({ ...prev, icon: value }));
   };
@@ -57,7 +75,6 @@ export default function MilestonesPage() {
     let updatedMilestones;
     if (isEditing && currentMilestone.id) {
       updatedMilestones = milestones.map(m => m.id === currentMilestone.id ? { ...m, ...currentMilestone } as Milestone : m);
-      toast({ title: "Success", description: "Milestone updated!" });
     } else {
       const newMilestone: Milestone = {
         id: Date.now().toString(),
@@ -65,15 +82,18 @@ export default function MilestonesPage() {
         ...currentMilestone,
       } as Milestone;
       updatedMilestones = [newMilestone, ...milestones];
-      toast({ title: "Success", description: "Milestone added!" });
     }
-    
+
     updatedMilestones.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setMilestones(updatedMilestones);
-    saveMilestonesToLocalStorage(updatedMilestones);
-    setIsDialogOpen(false);
-    setCurrentMilestone({});
-    setIsEditing(false);
+
+    if (saveMilestonesToLocalStorage(updatedMilestones)) {
+      setMilestones(updatedMilestones);
+      toast({ title: "Success", description: isEditing ? "Milestone updated!" : "Milestone added!" });
+      setIsDialogOpen(false);
+      setCurrentMilestone({});
+      setIsEditing(false);
+    }
+    // If saving fails, saveMilestonesToLocalStorage will show a toast
   };
 
   const openAddDialog = () => {
@@ -91,9 +111,12 @@ export default function MilestonesPage() {
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this milestone?")) {
       const updatedMilestones = milestones.filter(m => m.id !== id);
-      setMilestones(updatedMilestones);
-      saveMilestonesToLocalStorage(updatedMilestones);
-      toast({ title: "Success", description: "Milestone deleted." });
+      setMilestones(updatedMilestones); // Update UI immediately
+
+      if (saveMilestonesToLocalStorage(updatedMilestones)) {
+        toast({ title: "Success", description: "Milestone deleted and changes saved." });
+      }
+      // If saveMilestonesToLocalStorage fails, it has already shown an error toast.
     }
   };
 

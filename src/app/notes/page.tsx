@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -23,12 +24,29 @@ export default function LoveNotesPage() {
   useEffect(() => {
     const storedNotes = localStorage.getItem("loveNotes");
     if (storedNotes) {
-      setNotes(JSON.parse(storedNotes).sort((a: LoveNote, b: LoveNote) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      try {
+        setNotes(JSON.parse(storedNotes).sort((a: LoveNote, b: LoveNote) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      } catch (e) {
+        console.error("Error parsing notes from localStorage", e);
+        setNotes([]);
+      }
     }
   }, []);
 
-  const saveNotesToLocalStorage = (updatedNotes: LoveNote[]) => {
-    localStorage.setItem("loveNotes", JSON.stringify(updatedNotes));
+  const saveNotesToLocalStorage = (updatedNotes: LoveNote[]): boolean => {
+    try {
+      localStorage.setItem("loveNotes", JSON.stringify(updatedNotes));
+      return true;
+    } catch (error: any) {
+      // Basic error handling, can be expanded
+      toast({
+        title: "Storage Error",
+        description: "Could not save notes to local storage. Your browser storage might be full.",
+        variant: "destructive",
+      });
+      console.error("Error saving notes to localStorage:", error);
+      return false;
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -47,24 +65,26 @@ export default function LoveNotesPage() {
 
     if (isEditing && currentNote.id) {
       updatedNotes = notes.map(n => n.id === currentNote.id ? { ...n, ...currentNote, date: now } as LoveNote : n);
-      toast({ title: "Success", description: "Love note updated!" });
     } else {
       const newNote: LoveNote = {
         id: Date.now().toString(),
         date: now,
         title: currentNote.title || undefined,
-        content: currentNote.content,
+        content: currentNote.content!,
       };
       updatedNotes = [newNote, ...notes];
-      toast({ title: "Success", description: "Love note saved!" });
     }
-    
+
     updatedNotes.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setNotes(updatedNotes);
-    saveNotesToLocalStorage(updatedNotes);
-    setIsDialogOpen(false);
-    setCurrentNote({});
-    setIsEditing(false);
+
+    if(saveNotesToLocalStorage(updatedNotes)){
+      setNotes(updatedNotes);
+      toast({ title: "Success", description: isEditing ? "Love note updated!" : "Love note saved!" });
+      setIsDialogOpen(false);
+      setCurrentNote({});
+      setIsEditing(false);
+    }
+    // If saving fails, saveNotesToLocalStorage will show a toast
   };
 
   const openAddDialog = () => {
@@ -82,9 +102,12 @@ export default function LoveNotesPage() {
   const handleDelete = (id: string) => {
      if (confirm("Are you sure you want to delete this note?")) {
       const updatedNotes = notes.filter(n => n.id !== id);
-      setNotes(updatedNotes);
-      saveNotesToLocalStorage(updatedNotes);
-      toast({ title: "Success", description: "Love note deleted." });
+      setNotes(updatedNotes); // Update UI immediately
+
+      if(saveNotesToLocalStorage(updatedNotes)){
+        toast({ title: "Success", description: "Love note deleted and changes saved." });
+      }
+      // If saveNotesToLocalStorage fails, it has already shown an error toast.
     }
   };
 
