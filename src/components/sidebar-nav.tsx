@@ -15,7 +15,6 @@ import {
   GalleryVertical,
   Milestone,
   Wand2,
-  Music2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -37,7 +36,7 @@ export function SidebarNav() {
         <SidebarMenuItem key={item.label}>
           <Link href={item.href}>
             <SidebarMenuButton
-              asChild // Add asChild here
+              asChild
               className={cn(
                 "font-body",
                 pathname === item.href
@@ -47,10 +46,11 @@ export function SidebarNav() {
               isActive={pathname === item.href}
               tooltip={item.label}
             >
-              <>
+              {/* Wrap icon and label in a span. This span becomes the direct child of Slot. */}
+              <span>
                 <item.icon className="h-5 w-5" />
                 <span>{item.label}</span>
-              </>
+              </span>
             </SidebarMenuButton>
           </Link>
         </SidebarMenuItem>
@@ -58,4 +58,3 @@ export function SidebarNav() {
     </SidebarMenu>
   );
 }
-
