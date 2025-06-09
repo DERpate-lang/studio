@@ -16,11 +16,7 @@ import DecorativeBorder from "@/components/decorative-border";
 import { Card } from "@/components/ui/card";
 
 
-const initialPhotos: Photo[] = [
-  { id: "1", url: "https://placehold.co/600x400.png", caption: "Our first vacation", dateAdded: new Date().toISOString(), "data-ai-hint": "couple vacation" },
-  { id: "2", url: "https://placehold.co/400x600.png", caption: "Celebrating your birthday", dateAdded: new Date().toISOString(), "data-ai-hint": "birthday celebration" },
-  { id: "3", url: "https://placehold.co/600x450.png", caption: "Cozy evening at home", dateAdded: new Date().toISOString(), "data-ai-hint": "cozy home" },
-];
+const initialPhotos: Photo[] = [];
 
 
 export default function GalleryPage() {
@@ -87,7 +83,6 @@ export default function GalleryPage() {
     setIsLoading(true);
 
     const newPhotosPromises = selectedFiles.map(file => {
-      // Removed file size check here
       return new Promise<Photo | null>((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -114,7 +109,6 @@ export default function GalleryPage() {
       if (successfullyReadPhotos.length === 0 && selectedFiles.length > 0) {
         toast({ title: "No Photos Processed", description: "Could not process any of the selected files (check for errors above).", variant: "default" });
         setIsLoading(false);
-        // Do not close dialog, allow user to retry or change files
         return;
       }
       
@@ -123,10 +117,8 @@ export default function GalleryPage() {
         if (savePhotosToLocalStorage(potentialUpdatedPhotos)) {
           setPhotos(potentialUpdatedPhotos);
           toast({ title: "Success", description: `${successfullyReadPhotos.length} photo(s) added to gallery!` });
-          setIsDialogOpen(false); // This will trigger onOpenChange to reset fields
+          setIsDialogOpen(false); 
         }
-        // If savePhotosToLocalStorage returns false, it has already shown a toast (e.g. quota error)
-        // In that case, dialog remains open for user to act.
       }
     } catch (error) { 
       console.error("Error processing files batch:", error);
