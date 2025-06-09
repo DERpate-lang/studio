@@ -15,9 +15,8 @@ import {
   StickyNote,
   GalleryVertical,
   Milestone,
-  Wand2, // Correct icon for Love Letter AI
+  Wand2, 
   type LucideProps,
-  FileText, // Example for skeleton
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -81,7 +80,7 @@ export function SidebarNav() {
                 className={cn("font-body")}
                 isActive={false}
                 tooltip={item.label}
-                asChild // Important for skeleton structure if SidebarMenuButton expects single child
+                // Removed asChild here for skeleton path to ensure it renders a <button>
               >
                 <span>
                   <Skeleton className="h-5 w-5 rounded" />
@@ -93,3 +92,4 @@ export function SidebarNav() {
     </SidebarMenu>
   );
 }
+
