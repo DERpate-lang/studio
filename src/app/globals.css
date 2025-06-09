@@ -8,34 +8,34 @@ body {
 
 @layer base {
   :root {
-    --background: 34 78% 91%; /* Antique White #FAEBD7 */
-    --foreground: 25 10% 26%; /* Dark Brown/Charcoal for text */
+    --background: 169 56% 78%; /* User_Provided: #a3ebe0 */
+    --foreground: 0 0% 20%; /* Adjusted: #333333 (Dark Grey for readability) */
 
-    --card: 34 70% 95%; /* Lighter Antique White/Cream */
-    --card-foreground: 25 10% 26%;
+    --card: 169 56% 83%; 
+    --card-foreground: 0 0% 20%;
 
-    --popover: 34 70% 95%;
-    --popover-foreground: 25 10% 26%;
+    --popover: 169 56% 83%;
+    --popover-foreground: 0 0% 20%;
 
-    --primary: 345 100% 25%; /* Deep Burgundy #800020 */
-    --primary-foreground: 34 78% 91%; /* Antique White for text on primary */
+    --primary: 348 48% 73%; /* User_Provided_Accent_as_Primary: #dd98a6 */
+    --primary-foreground: 0 0% 10%; 
 
-    --secondary: 30 30% 85%; /* Soft Brown/Gray for secondary elements */
-    --secondary-foreground: 345 100% 25%; /* Deep Burgundy text on secondary */
+    --secondary: 169 30% 85%; 
+    --secondary-foreground: 0 0% 20%; 
 
-    --muted: 30 30% 88%; /* Muted version of secondary */
-    --muted-foreground: 25 10% 40%; /* Slightly lighter text for muted */
+    --muted: 169 30% 90%; 
+    --muted-foreground: 0 0% 40%; 
 
-    --accent: 51 100% 50%; /* Gold #FFD700 */
-    --accent-foreground: 25 10% 26%; /* Dark text on gold */
+    --accent: 348 48% 73%; /* User_Provided: #dd98a6 */
+    --accent-foreground: 0 0% 10%; 
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 30 20% 70%; /* Soft Brown border */
-    --input: 30 20% 75%; /* Slightly lighter for input border */
-    --ring: 51 100% 50%; /* Gold for ring, consistent with accent */
-    --radius: 0.75rem; /* Slightly more rounded for Victorian feel */
+    --border: 169 30% 65%; 
+    --input: 169 30% 70%; 
+    --ring: 348 48% 73%; 
+    --radius: 0.75rem; 
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -43,53 +43,53 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
 
-    --sidebar-background: 345 30% 20%; /* Darker burgundy for sidebar */
-    --sidebar-foreground: 34 78% 88%; /* Lighter text for sidebar */
-    --sidebar-primary: 51 100% 60%; /* Brighter Gold for active items in sidebar */
-    --sidebar-primary-foreground: 345 100% 25%; /* Burgundy text on gold */
-    --sidebar-accent: 345 40% 30%; /* Slightly lighter burgundy for hover */
-    --sidebar-accent-foreground: 34 78% 91%;
-    --sidebar-border: 345 20% 15%;
-    --sidebar-ring: 51 100% 50%;
+    --sidebar-background: 348 30% 20%; 
+    --sidebar-foreground: 348 30% 88%; 
+    --sidebar-primary: 348 48% 73%; 
+    --sidebar-primary-foreground: 0 0% 10%; 
+    --sidebar-accent: 348 30% 30%; 
+    --sidebar-accent-foreground: 348 30% 88%;
+    --sidebar-border: 348 30% 15%;
+    --sidebar-ring: 348 48% 73%;
   }
 
   .dark {
-    --background: 345 20% 10%; /* Very dark burgundy/brown */
-    --foreground: 34 78% 85%; /* Off-white/cream text */
+    --background: 169 30% 15%; 
+    --foreground: 169 30% 85%; 
 
-    --card: 345 20% 15%;
-    --card-foreground: 34 78% 85%;
+    --card: 169 30% 20%;
+    --card-foreground: 169 30% 85%;
 
-    --popover: 345 20% 15%;
-    --popover-foreground: 34 78% 85%;
+    --popover: 169 30% 20%;
+    --popover-foreground: 169 30% 85%;
 
-    --primary: 51 100% 60%; /* Brighter Gold for primary in dark mode */
-    --primary-foreground: 345 20% 10%; /* Dark text on gold */
+    --primary: 348 60% 75%; 
+    --primary-foreground: 0 0% 10%; 
 
-    --secondary: 345 20% 25%; /* Darker muted burgundy */
-    --secondary-foreground: 34 78% 85%;
+    --secondary: 169 25% 25%; 
+    --secondary-foreground: 169 30% 85%;
 
-    --muted: 345 20% 20%;
-    --muted-foreground: 34 78% 70%;
+    --muted: 169 25% 20%;
+    --muted-foreground: 169 30% 70%;
 
-    --accent: 345 80% 55%; /* Richer Burgundy for accent */
-    --accent-foreground: 34 78% 91%;
+    --accent: 348 60% 75%; 
+    --accent-foreground: 0 0% 10%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 345 20% 30%;
-    --input: 345 20% 35%;
-    --ring: 51 100% 60%; /* Gold ring */
+    --border: 169 20% 30%;
+    --input: 169 20% 35%;
+    --ring: 348 60% 75%; 
 
-    --sidebar-background: 345 25% 8%;
-    --sidebar-foreground: 34 78% 80%;
-    --sidebar-primary: 51 100% 60%; /* Gold */
-    --sidebar-primary-foreground: 345 25% 8%;
-    --sidebar-accent: 345 20% 18%;
-    --sidebar-accent-foreground: 34 78% 91%;
-    --sidebar-border: 345 15% 12%;
-    --sidebar-ring: 51 100% 60%; /* Gold */
+    --sidebar-background: 348 25% 8%;
+    --sidebar-foreground: 348 25% 80%;
+    --sidebar-primary: 348 60% 75%; 
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 348 25% 18%;
+    --sidebar-accent-foreground: 348 25% 80%;
+    --sidebar-border: 348 25% 5%;
+    --sidebar-ring: 348 60% 75%; 
   }
 }
 
@@ -133,7 +133,7 @@ body {
 
 .petal {
   position: absolute;
-  background-color: hsl(var(--primary) / 0.7); /* Use primary color with some transparency */
+  background-color: hsl(var(--primary) / 0.7); 
   border-radius: 150px 0;
   animation: fall 10s linear infinite;
   pointer-events: none;
