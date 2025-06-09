@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,34 +9,34 @@ body {
 
 @layer base {
   :root {
-    --background: 169 56% 78%; /* User_Provided: #a3ebe0 */
-    --foreground: 0 0% 20%; /* Adjusted: #333333 (Dark Grey for readability) */
+    --background: 0 0% 100%; /* #ffffff */
+    --foreground: 348 48% 73%; /* #dd98a6 */
 
-    --card: 169 56% 83%; 
-    --card-foreground: 0 0% 20%;
+    --card: 0 0% 97%; /* Derived from white background */
+    --card-foreground: 348 48% 73%; /* #dd98a6 */
 
-    --popover: 169 56% 83%;
-    --popover-foreground: 0 0% 20%;
+    --popover: 0 0% 97%; /* Derived from white background */
+    --popover-foreground: 348 48% 73%; /* #dd98a6 */
 
-    --primary: 348 48% 73%; /* User_Provided_Accent_as_Primary: #dd98a6 */
-    --primary-foreground: 0 0% 10%; 
+    --primary: 169 56% 78%; /* #a3ebe0 */
+    --primary-foreground: 0 0% 100%; /* #ffffff */
 
-    --secondary: 169 30% 85%; 
-    --secondary-foreground: 0 0% 20%; 
+    --secondary: 0 0% 94%; /* Derived from white background */
+    --secondary-foreground: 348 48% 73%; /* #dd98a6 */
 
-    --muted: 169 30% 90%; 
-    --muted-foreground: 0 0% 40%; 
+    --muted: 0 0% 90%; /* Derived from white background */
+    --muted-foreground: 348 48% 80%; /* Lighter #dd98a6 */
 
-    --accent: 348 48% 73%; /* User_Provided: #dd98a6 */
-    --accent-foreground: 0 0% 10%; 
+    --accent: 169 56% 78%; /* #a3ebe0 */
+    --accent-foreground: 0 0% 100%; /* #ffffff */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 169 30% 65%; 
-    --input: 169 30% 70%; 
-    --ring: 348 48% 73%; 
-    --radius: 0.75rem; 
+    --border: 348 48% 90%; /* Light pinkish border */
+    --input: 0 0% 95%; /* Light grey input background */
+    --ring: 169 56% 78%; /* #a3ebe0 */
+    --radius: 0.75rem;
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -43,53 +44,55 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
 
-    --sidebar-background: 348 30% 20%; 
-    --sidebar-foreground: 348 30% 88%; 
-    --sidebar-primary: 348 48% 73%; 
-    --sidebar-primary-foreground: 0 0% 10%; 
-    --sidebar-accent: 348 30% 30%; 
-    --sidebar-accent-foreground: 348 30% 88%;
-    --sidebar-border: 348 30% 15%;
-    --sidebar-ring: 348 48% 73%;
+    /* Sidebar Light Theme */
+    --sidebar-background: 0 0% 100%; /* #ffffff */
+    --sidebar-foreground: 348 48% 73%; /* #dd98a6 */
+    --sidebar-primary: 169 56% 78%; /* #a3ebe0 */
+    --sidebar-primary-foreground: 0 0% 100%; /* #ffffff */
+    --sidebar-accent: 169 56% 90%; /* Very light teal for hover */
+    --sidebar-accent-foreground: 348 48% 73%; /* #dd98a6 */
+    --sidebar-border: 169 56% 85%; /* Light teal border */
+    --sidebar-ring: 169 56% 78%; /* #a3ebe0 */
   }
 
   .dark {
-    --background: 169 30% 15%; 
-    --foreground: 169 30% 85%; 
+    --background: 169 50% 15%; /* Dark Teal */
+    --foreground: 0 0% 100%; /* #ffffff */
 
-    --card: 169 30% 20%;
-    --card-foreground: 169 30% 85%;
+    --card: 169 50% 20%; /* Darker Teal */
+    --card-foreground: 0 0% 100%; /* #ffffff */
 
-    --popover: 169 30% 20%;
-    --popover-foreground: 169 30% 85%;
+    --popover: 169 50% 20%; /* Darker Teal */
+    --popover-foreground: 0 0% 100%; /* #ffffff */
 
-    --primary: 348 60% 75%; 
-    --primary-foreground: 0 0% 10%; 
+    --primary: 348 48% 73%; /* #dd98a6 */
+    --primary-foreground: 0 0% 100%; /* #ffffff */
 
-    --secondary: 169 25% 25%; 
-    --secondary-foreground: 169 30% 85%;
+    --secondary: 169 50% 25%; /* Darker Teal */
+    --secondary-foreground: 0 0% 100%; /* #ffffff */
 
-    --muted: 169 25% 20%;
-    --muted-foreground: 169 30% 70%;
+    --muted: 169 50% 30%; /* Darker Teal */
+    --muted-foreground: 0 0% 80%; /* Off-white */
 
-    --accent: 348 60% 75%; 
-    --accent-foreground: 0 0% 10%;
+    --accent: 348 48% 73%; /* #dd98a6 */
+    --accent-foreground: 0 0% 100%; /* #ffffff */
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 169 20% 30%;
-    --input: 169 20% 35%;
-    --ring: 348 60% 75%; 
+    --border: 169 50% 35%; /* Teal-based border */
+    --input: 169 50% 40%; /* Teal-based input bg */
+    --ring: 348 48% 73%; /* #dd98a6 */
 
-    --sidebar-background: 348 25% 8%;
-    --sidebar-foreground: 348 25% 80%;
-    --sidebar-primary: 348 60% 75%; 
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 348 25% 18%;
-    --sidebar-accent-foreground: 348 25% 80%;
-    --sidebar-border: 348 25% 5%;
-    --sidebar-ring: 348 60% 75%; 
+    /* Sidebar Dark Theme */
+    --sidebar-background: 169 50% 10%; /* Very Dark Teal */
+    --sidebar-foreground: 0 0% 100%; /* #ffffff */
+    --sidebar-primary: 348 48% 73%; /* #dd98a6 */
+    --sidebar-primary-foreground: 0 0% 100%; /* #ffffff */
+    --sidebar-accent: 169 50% 20%; /* Dark Teal for hover */
+    --sidebar-accent-foreground: 0 0% 100%; /* #ffffff */
+    --sidebar-border: 169 50% 5%; /* Darker teal border */
+    --sidebar-ring: 348 48% 73%; /* #dd98a6 */
   }
 }
 
@@ -133,7 +136,7 @@ body {
 
 .petal {
   position: absolute;
-  background-color: hsl(var(--primary) / 0.7); 
+  background-color: hsl(var(--primary) / 0.7);
   border-radius: 150px 0;
   animation: fall 10s linear infinite;
   pointer-events: none;
