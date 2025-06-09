@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { useToast } from "@/hooks/use-toast";
 import { MusicPlayer } from "@/components/music-player";
 import DecorativeBorder from "@/components/decorative-border";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 
 const initialPhotos: Photo[] = [
@@ -26,7 +26,7 @@ const initialPhotos: Photo[] = [
 export default function GalleryPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [newPhotoCaption, setNewPhotoCaption] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -39,7 +39,7 @@ export default function GalleryPage() {
         setPhotos(JSON.parse(storedPhotos));
       } catch (e) {
         console.error("Error parsing photos from localStorage", e);
-        setPhotos(initialPhotos); // Fallback to initial if parsing fails
+        setPhotos(initialPhotos); 
         localStorage.setItem("galleryPhotos", JSON.stringify(initialPhotos));
       }
     } else {
@@ -53,7 +53,7 @@ export default function GalleryPage() {
       localStorage.setItem("galleryPhotos", JSON.stringify(updatedPhotos));
       return true;
     } catch (error: any) {
-      if (error.name === 'QuotaExceededError' || error.code === 22 || error.code === 1014) { // DOMException code for quota exceeded
+      if (error.name === 'QuotaExceededError' || error.code === 22 || error.code === 1014) { 
         toast({
           title: "Storage Limit Reached",
           description: "Your browser's local storage is full. Please remove some photos or try smaller images.",
@@ -72,55 +72,72 @@ export default function GalleryPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      // Basic check for file size (e.g., 5MB limit before even trying to read)
-      if (event.target.files[0].size > 5 * 1024 * 1024) { 
-        toast({ title: "File Too Large", description: "Please select an image smaller than 5MB.", variant: "destructive"});
-        setSelectedFile(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-        return;
-      }
-      setSelectedFile(event.target.files[0]);
+    if (event.target.files) {
+      setSelectedFiles(Array.from(event.target.files));
     } else {
-      setSelectedFile(null);
+      setSelectedFiles([]);
     }
   };
 
-  const handleAddPhoto = () => {
-    if (!selectedFile) {
-      toast({ title: "Error", description: "Please select an image file.", variant: "destructive" });
+  const handleAddPhoto = async () => {
+    if (selectedFiles.length === 0) {
+      toast({ title: "Error", description: "Please select image file(s).", variant: "destructive" });
       return;
     }
     setIsLoading(true);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const photoToAdd: Photo = {
-        id: Date.now().toString(),
-        url: reader.result as string,
-        caption: newPhotoCaption,
-        dateAdded: new Date().toISOString(),
-        "data-ai-hint": "uploaded image"
-      };
-      const potentialUpdatedPhotos = [photoToAdd, ...photos];
-      
-      if (savePhotosToLocalStorage(potentialUpdatedPhotos)) {
-        setPhotos(potentialUpdatedPhotos);
-        toast({ title: "Success", description: "Photo added to gallery!" });
-        setSelectedFile(null);
-        setNewPhotoCaption("");
-        if (fileInputRef.current) {
-          fileInputRef.current.value = ""; 
-        }
-        setIsDialogOpen(false);
+
+    const newPhotosPromises = selectedFiles.map(file => {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ title: "File Too Large", description: `${file.name} is over 5MB and will be skipped.`, variant: "destructive" });
+        return Promise.resolve(null); 
       }
-      // If savePhotosToLocalStorage fails, it shows its own toast.
+
+      return new Promise<Photo | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve({
+            id: `${Date.now().toString()}-${file.name}-${Math.random().toString(36).substring(2, 7)}`,
+            url: reader.result as string,
+            caption: newPhotoCaption,
+            dateAdded: new Date().toISOString(),
+            "data-ai-hint": "uploaded image"
+          });
+        };
+        reader.onerror = () => {
+          toast({ title: "Error Reading File", description: `Failed to read ${file.name}.`, variant: "destructive" });
+          resolve(null); 
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    try {
+      const results = await Promise.all(newPhotosPromises);
+      const successfullyReadPhotos = results.filter(photo => photo !== null) as Photo[];
+
+      if (successfullyReadPhotos.length === 0 && selectedFiles.length > 0) {
+        toast({ title: "No Photos Processed", description: "Could not process any of the selected files (check for errors above).", variant: "default" });
+        setIsLoading(false);
+        // Do not close dialog, allow user to retry or change files
+        return;
+      }
+      
+      if (successfullyReadPhotos.length > 0) {
+        const potentialUpdatedPhotos = [...successfullyReadPhotos, ...photos];
+        if (savePhotosToLocalStorage(potentialUpdatedPhotos)) {
+          setPhotos(potentialUpdatedPhotos);
+          toast({ title: "Success", description: `${successfullyReadPhotos.length} photo(s) added to gallery!` });
+          setIsDialogOpen(false); // This will trigger onOpenChange to reset fields
+        }
+        // If savePhotosToLocalStorage returns false, it has already shown a toast (e.g. quota error)
+        // In that case, dialog remains open for user to act.
+      }
+    } catch (error) { 
+      console.error("Error processing files batch:", error);
+      toast({ title: "Batch Error", description: "An unexpected error occurred while processing photos.", variant: "destructive" });
+    } finally {
       setIsLoading(false);
-    };
-    reader.onerror = () => {
-      toast({ title: "Error", description: "Failed to read the image file.", variant: "destructive" });
-      setIsLoading(false);
-    };
-    reader.readAsDataURL(selectedFile);
+    }
   };
 
   const handleDeletePhoto = (id: string) => {
@@ -130,10 +147,7 @@ export default function GalleryPage() {
         setPhotos(updatedPhotos);
         toast({ title: "Success", description: "Photo removed from gallery." });
       } else {
-        // If saving fails (e.g. quota still somehow an issue, unlikely on delete),
-        // at least the UI is updated. User might need to retry or refresh.
-        // For robustness, one might revert UI state here, but for deletion, it's often acceptable.
-        setPhotos(updatedPhotos); // Keep UI consistent with intent
+        setPhotos(updatedPhotos); 
         toast({ title: "Info", description: "Photo removed from view. Storage update may have failed if limit was hit.", variant: "default"});
       }
     }
@@ -149,7 +163,7 @@ export default function GalleryPage() {
       <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
         setIsDialogOpen(isOpen);
         if (!isOpen) {
-          setSelectedFile(null);
+          setSelectedFiles([]);
           setNewPhotoCaption("");
           if (fileInputRef.current) {
             fileInputRef.current.value = "";
@@ -158,26 +172,37 @@ export default function GalleryPage() {
       }}>
         <DialogTrigger asChild>
           <Button className="mb-6 bg-primary hover:bg-primary/90 text-primary-foreground font-body">
-            <PlusCircle className="mr-2 h-5 w-5" /> Add New Photo
+            <PlusCircle className="mr-2 h-5 w-5" /> Add New Photo(s)
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px] bg-card border-primary/30">
           <DialogHeader>
-            <DialogTitle className="font-headline text-2xl text-primary">Add Photo to Gallery</DialogTitle>
+            <DialogTitle className="font-headline text-2xl text-primary">Add Photo(s) to Gallery</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4 font-body">
             <div className="space-y-1">
-              <Label htmlFor="photoFile" className="text-foreground/80">Photo File</Label>
-              <Input id="photoFile" type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} />
+              <Label htmlFor="photoFile" className="text-foreground/80">Photo File(s)</Label>
+              <Input id="photoFile" type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} multiple />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="caption" className="text-foreground/80">Caption (Optional)</Label>
+              <Label htmlFor="caption" className="text-foreground/80">Caption (Optional, applies to all)</Label>
               <Input id="caption" value={newPhotoCaption} onChange={(e) => setNewPhotoCaption(e.target.value)} />
             </div>
-            {selectedFile && (
-              <div className="text-sm text-muted-foreground">
-                Preview:
-                <Image src={URL.createObjectURL(selectedFile)} alt="Preview" width={100} height={100} className="mt-2 rounded-md aspect-square object-cover" />
+            {selectedFiles.length > 0 && (
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p>{selectedFiles.length} file(s) selected:</p>
+                {selectedFiles.length === 1 && selectedFiles[0] && (
+                  <>
+                    <p className="truncate ml-2">- {selectedFiles[0].name}</p>
+                    <Image src={URL.createObjectURL(selectedFiles[0])} alt="Preview" width={100} height={100} className="mt-2 rounded-md aspect-square object-cover" />
+                  </>
+                )}
+                {selectedFiles.length > 1 && (
+                  <ul className="list-disc pl-6 max-h-24 overflow-y-auto text-xs">
+                    {selectedFiles.slice(0, 5).map(file => <li key={file.name} className="truncate">{file.name}</li>)}
+                    {selectedFiles.length > 5 && <li>...and {selectedFiles.length - 5} more.</li>}
+                  </ul>
+                )}
               </div>
             )}
           </div>
@@ -185,9 +210,9 @@ export default function GalleryPage() {
             <DialogClose asChild>
               <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" disabled={isLoading}>Cancel</Button>
             </DialogClose>
-            <Button onClick={handleAddPhoto} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isLoading}>
+            <Button onClick={handleAddPhoto} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isLoading || selectedFiles.length === 0}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Add Photo
+              Add Photo(s)
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -204,12 +229,12 @@ export default function GalleryPage() {
             <Image
               src={photo.url}
               alt={photo.caption || "Gallery image"}
-              fill // Use fill instead of layout="fill"
-              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw" // Provide sizes for fill
-              style={{ objectFit: "cover" }} // Use style for objectFit
+              fill 
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw" 
+              style={{ objectFit: "cover" }} 
               className="transition-transform duration-500 group-hover:scale-110"
               data-ai-hint={(photo as any)['data-ai-hint'] || "gallery image"}
-              unoptimized={photo.url.startsWith('data:image')} /* Allow data URIs */
+              unoptimized={photo.url.startsWith('data:image')} 
             />
             {photo.caption && (
               <div className="absolute inset-x-0 bottom-0 bg-black/50 p-2 text-center">
@@ -231,3 +256,4 @@ export default function GalleryPage() {
     </PageContainer>
   );
 }
+
