@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -263,7 +264,12 @@ const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
 >(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar } = useSidebar();
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   return (
     <Button
@@ -278,7 +284,7 @@ const SidebarTrigger = React.forwardRef<
       }}
       {...props}
     >
-      <PanelLeft />
+      {isClient ? <PanelLeft /> : <div className="h-4 w-4" />} {/* Placeholder for PanelLeft, default button icon size is h-4 w-4 */}
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )
