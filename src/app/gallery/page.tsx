@@ -25,10 +25,12 @@ export default function GalleryPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [newPhotoCaption, setNewPhotoCaption] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false); // Added for client-side only rendering
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
+    setIsClient(true); // Set client flag on mount
     const storedPhotos = localStorage.getItem("galleryPhotos");
     if (storedPhotos) {
       try {
@@ -160,7 +162,8 @@ export default function GalleryPage() {
       }}>
         <DialogTrigger asChild>
           <Button className="mb-6 bg-primary hover:bg-primary/90 text-primary-foreground font-body">
-            <PlusCircle className="mr-2 h-5 w-5" /> Add New Photo(s)
+            {isClient && <PlusCircle className="mr-2 h-5 w-5" />}
+            Add New Photo(s)
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px] bg-card border-primary/30">
@@ -235,7 +238,7 @@ export default function GalleryPage() {
               className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-8 w-8"
               onClick={() => handleDeletePhoto(photo.id)}
             >
-              <Trash2 className="h-4 w-4" />
+              {isClient && <Trash2 className="h-4 w-4" />}
             </Button>
           </Card>
         ))}
@@ -244,4 +247,3 @@ export default function GalleryPage() {
     </PageContainer>
   );
 }
-
