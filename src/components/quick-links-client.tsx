@@ -5,7 +5,7 @@ import { useState, useEffect, type ComponentType } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { LucideProps } from "lucide-react"; 
+import type { LucideProps } from "lucide-react";
 import { BookHeart, StickyNote, GalleryVertical, Milestone, Wand2 } from "lucide-react";
 
 // Map string names to actual Lucide components
@@ -28,7 +28,7 @@ interface QuickLinksClientProps {
   quickLinks: QuickLinkItem[];
 }
 
-export function QuickLinksClient({ quickLinks }: QuickLinksClientProps) {
+export function QuickLinksClient({ quickLinks = [] }: QuickLinksClientProps) {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export function QuickLinksClient({ quickLinks }: QuickLinksClientProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {quickLinks.map(link => {
-        const IconComponent = iconMap[link.icon]; // Look up the component from the map
+        const IconComponent = iconMap[link.icon];
         return (
           <Card key={link.href} className="hover:shadow-xl transition-shadow duration-300 ease-in-out border-primary/20 bg-background/70">
             <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">
