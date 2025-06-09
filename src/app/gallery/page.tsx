@@ -20,7 +20,7 @@ const initialPhotos: Photo[] = [];
 
 
 export default function GalleryPage() {
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>(initialPhotos);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [newPhotoCaption, setNewPhotoCaption] = useState("");
@@ -127,7 +127,6 @@ export default function GalleryPage() {
       toast({ title: "Batch Error", description: "An unexpected error occurred while processing photos.", variant: "destructive" });
     } finally {
       setIsLoading(false);
-      // Reset file input and caption after attempting to add
       setSelectedFiles([]);
       setNewPhotoCaption("");
       if (fileInputRef.current) {
@@ -145,7 +144,6 @@ export default function GalleryPage() {
         toast({ title: "Success", description: "Photo removed from gallery and changes saved." });
       }
       // If savePhotosToLocalStorage returns false, it has already shown an error toast.
-      // The UI is updated for the current session regardless.
     }
   };
 
