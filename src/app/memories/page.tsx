@@ -68,13 +68,7 @@ export default function MemoriesPage() {
   
   const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      if (e.target.files[0].size > 5 * 1024 * 1024) { // Basic 5MB check
-        toast({ title: "File Too Large", description: "Please select an image smaller than 5MB.", variant: "destructive"});
-        setSelectedPhotoFile(null);
-        setCurrentMemory(prev => ({ ...prev, photoUrl: undefined, "data-ai-hint": undefined }));
-        if (photoFileInputRef.current) photoFileInputRef.current.value = "";
-        return;
-      }
+      // Removed file size check here
       setSelectedPhotoFile(e.target.files[0]);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -280,3 +274,4 @@ export default function MemoriesPage() {
     </PageContainer>
   );
 }
+

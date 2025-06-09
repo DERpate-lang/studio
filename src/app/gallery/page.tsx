@@ -87,11 +87,7 @@ export default function GalleryPage() {
     setIsLoading(true);
 
     const newPhotosPromises = selectedFiles.map(file => {
-      if (file.size > 5 * 1024 * 1024) {
-        toast({ title: "File Too Large", description: `${file.name} is over 5MB and will be skipped.`, variant: "destructive" });
-        return Promise.resolve(null); 
-      }
-
+      // Removed file size check here
       return new Promise<Photo | null>((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => {
