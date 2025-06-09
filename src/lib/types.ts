@@ -1,3 +1,4 @@
+
 export interface AnniversaryDate {
   date: string; // ISO string format YYYY-MM-DD
 }
@@ -7,7 +8,8 @@ export interface Memory {
   date: string; // ISO string format YYYY-MM-DD
   title: string;
   description: string;
-  photoUrl?: string; // Optional photo URL
+  photoUrl?: string; // Optional photo URL (can be data URI or web URL)
+  "data-ai-hint"?: string; // Optional AI hint for the photo
 }
 
 export interface LoveNote {
@@ -27,7 +29,8 @@ export interface Milestone {
 
 export interface Photo {
   id: string;
-  url: string;
+  url: string; // Can be data URI or web URL
   caption?: string;
   dateAdded: string; // ISO string
+  "data-ai-hint"?: string; // Optional AI hint for the photo
 }

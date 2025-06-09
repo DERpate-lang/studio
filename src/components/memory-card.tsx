@@ -1,3 +1,4 @@
+
 import type { Memory } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
@@ -21,7 +22,8 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
             alt={memory.title}
             layout="fill"
             objectFit="cover"
-            data-ai-hint="couple memory"
+            data-ai-hint={memory["data-ai-hint"] || "couple memory"}
+            unoptimized={memory.photoUrl.startsWith('data:image')} /* Allow data URIs */
           />
         </div>
       )}
