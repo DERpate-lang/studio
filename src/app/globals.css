@@ -9,33 +9,33 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* #ffffff */
-    --foreground: 348 48% 73%; /* #dd98a6 */
+    --background: 0 0% 0%; /* Black */
+    --foreground: 0 0% 100%; /* White */
 
-    --card: 0 0% 97%; /* Derived from white background */
-    --card-foreground: 348 48% 73%; /* #dd98a6 */
+    --card: 0 0% 7%; /* Very dark grey (slightly off-black) */
+    --card-foreground: 0 0% 100%; /* White */
 
-    --popover: 0 0% 97%; /* Derived from white background */
-    --popover-foreground: 348 48% 73%; /* #dd98a6 */
+    --popover: 0 0% 7%; /* Very dark grey */
+    --popover-foreground: 0 0% 100%; /* White */
 
-    --primary: 169 56% 78%; /* #a3ebe0 */
-    --primary-foreground: 0 0% 100%; /* #ffffff */
+    --primary: 169 56% 78%; /* Light Teal #a3ebe0 */
+    --primary-foreground: 0 0% 0%; /* Black (for text on teal buttons) */
 
-    --secondary: 0 0% 94%; /* Derived from white background */
-    --secondary-foreground: 348 48% 73%; /* #dd98a6 */
+    --secondary: 0 0% 10%; /* Dark grey */
+    --secondary-foreground: 0 0% 100%; /* White */
 
-    --muted: 0 0% 90%; /* Derived from white background */
-    --muted-foreground: 348 48% 80%; /* Lighter #dd98a6 */
+    --muted: 0 0% 15%; /* Dark grey */
+    --muted-foreground: 0 0% 65%; /* Light grey */
 
-    --accent: 169 56% 78%; /* #a3ebe0 */
-    --accent-foreground: 0 0% 100%; /* #ffffff */
+    --accent: 169 56% 78%; /* Light Teal #a3ebe0 */
+    --accent-foreground: 0 0% 0%; /* Black (for text on teal elements) */
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%; /* Standard Red */
+    --destructive-foreground: 0 0% 100%; /* White */
 
-    --border: 348 48% 90%; /* Light pinkish border */
-    --input: 0 0% 95%; /* Light grey input background */
-    --ring: 169 56% 78%; /* #a3ebe0 */
+    --border: 0 0% 20%; /* Darker grey border */
+    --input: 0 0% 10%; /* Dark grey input background */
+    --ring: 169 56% 78%; /* Light Teal #a3ebe0 for focus rings */
     --radius: 0.75rem;
 
     --chart-1: 12 76% 61%;
@@ -44,55 +44,55 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
 
-    /* Sidebar Light Theme */
-    --sidebar-background: 0 0% 100%; /* #ffffff */
-    --sidebar-foreground: 348 48% 73%; /* #dd98a6 */
-    --sidebar-primary: 169 56% 78%; /* #a3ebe0 */
-    --sidebar-primary-foreground: 0 0% 100%; /* #ffffff */
-    --sidebar-accent: 169 56% 90%; /* Very light teal for hover */
-    --sidebar-accent-foreground: 348 48% 73%; /* #dd98a6 */
-    --sidebar-border: 169 56% 85%; /* Light teal border */
-    --sidebar-ring: 169 56% 78%; /* #a3ebe0 */
+    /* Sidebar "Light" (Teal Accent on Black) Theme */
+    --sidebar-background: 0 0% 3%; /* Almost Black */
+    --sidebar-foreground: 0 0% 100%; /* White */
+    --sidebar-primary: 169 56% 78%; /* Light Teal */
+    --sidebar-primary-foreground: 0 0% 0%; /* Black */
+    --sidebar-accent: 169 56% 20%; /* Darker Teal for hover */
+    --sidebar-accent-foreground: 0 0% 100%; /* White */
+    --sidebar-border: 0 0% 10%; /* Dark grey border for sidebar */
+    --sidebar-ring: 169 56% 78%; /* Light Teal */
   }
 
   .dark {
-    --background: 169 50% 15%; /* Dark Teal */
-    --foreground: 0 0% 100%; /* #ffffff */
+    --background: 0 0% 0%; /* Black */
+    --foreground: 0 0% 100%; /* White */
 
-    --card: 169 50% 20%; /* Darker Teal */
-    --card-foreground: 0 0% 100%; /* #ffffff */
+    --card: 0 0% 7%; /* Very dark grey */
+    --card-foreground: 0 0% 100%; /* White */
 
-    --popover: 169 50% 20%; /* Darker Teal */
-    --popover-foreground: 0 0% 100%; /* #ffffff */
+    --popover: 0 0% 7%; /* Very dark grey */
+    --popover-foreground: 0 0% 100%; /* White */
 
-    --primary: 348 48% 73%; /* #dd98a6 */
-    --primary-foreground: 0 0% 100%; /* #ffffff */
+    --primary: 348 48% 73%; /* Pinkish-Red #dd98a6 */
+    --primary-foreground: 0 0% 100%; /* White (for text on pink buttons) */
 
-    --secondary: 169 50% 25%; /* Darker Teal */
-    --secondary-foreground: 0 0% 100%; /* #ffffff */
+    --secondary: 0 0% 10%; /* Dark grey */
+    --secondary-foreground: 0 0% 100%; /* White */
 
-    --muted: 169 50% 30%; /* Darker Teal */
-    --muted-foreground: 0 0% 80%; /* Off-white */
+    --muted: 0 0% 15%; /* Dark grey */
+    --muted-foreground: 0 0% 65%; /* Light grey */
 
-    --accent: 348 48% 73%; /* #dd98a6 */
-    --accent-foreground: 0 0% 100%; /* #ffffff */
+    --accent: 348 48% 73%; /* Pinkish-Red #dd98a6 */
+    --accent-foreground: 0 0% 100%; /* White (for text on pink elements) */
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%; /* Darker Red for dark mode */
+    --destructive-foreground: 0 0% 98%; /* Off-white */
 
-    --border: 169 50% 35%; /* Teal-based border */
-    --input: 169 50% 40%; /* Teal-based input bg */
-    --ring: 348 48% 73%; /* #dd98a6 */
+    --border: 0 0% 20%; /* Darker grey border */
+    --input: 0 0% 10%; /* Dark grey input background */
+    --ring: 348 48% 73%; /* Pinkish-Red #dd98a6 for focus rings */
 
-    /* Sidebar Dark Theme */
-    --sidebar-background: 169 50% 10%; /* Very Dark Teal */
-    --sidebar-foreground: 0 0% 100%; /* #ffffff */
-    --sidebar-primary: 348 48% 73%; /* #dd98a6 */
-    --sidebar-primary-foreground: 0 0% 100%; /* #ffffff */
-    --sidebar-accent: 169 50% 20%; /* Dark Teal for hover */
-    --sidebar-accent-foreground: 0 0% 100%; /* #ffffff */
-    --sidebar-border: 169 50% 5%; /* Darker teal border */
-    --sidebar-ring: 348 48% 73%; /* #dd98a6 */
+    /* Sidebar "Dark" (Pink Accent on Black) Theme */
+    --sidebar-background: 0 0% 3%; /* Almost Black */
+    --sidebar-foreground: 0 0% 100%; /* White */
+    --sidebar-primary: 348 48% 73%; /* Pinkish-Red */
+    --sidebar-primary-foreground: 0 0% 100%; /* White */
+    --sidebar-accent: 348 48% 20%; /* Darker Pinkish-Red for hover */
+    --sidebar-accent-foreground: 0 0% 100%; /* White */
+    --sidebar-border: 0 0% 10%; /* Dark grey border for sidebar */
+    --sidebar-ring: 348 48% 73%; /* Pinkish-Red */
   }
 }
 
