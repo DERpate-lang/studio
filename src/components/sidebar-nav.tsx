@@ -15,7 +15,8 @@ import {
   StickyNote,
   GalleryVertical,
   Milestone,
-  Wand2, 
+  Wand2,
+  MessageSquare, // Added MessageSquare icon
   type LucideProps,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ const navItems: NavItem[] = [
   { href: "/gallery", label: "Photo Gallery", icon: GalleryVertical },
   { href: "/milestones", label: "Milestones", icon: Milestone },
   { href: "/love-letter-generator", label: "Love Letter AI", icon: Wand2 },
+  { href: "/socket-test", label: "Chat Test", icon: MessageSquare }, // Added new nav item
 ];
 
 export function SidebarNav() {
@@ -92,4 +94,3 @@ export function SidebarNav() {
     </SidebarMenu>
   );
 }
-
