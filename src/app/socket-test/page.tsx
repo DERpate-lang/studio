@@ -18,6 +18,7 @@ export default function SocketTestPage() {
   const [message, setMessage] = useState("");
   const [chatLog, setChatLog] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const chatLogRef = useRef<HTMLDivElement>(null);
 
 
@@ -25,18 +26,20 @@ export default function SocketTestPage() {
     // Ensure this runs only on the client
     if (typeof window !== "undefined") {
         console.log("SocketTestPage: useEffect attempting to establish socket connection.");
+        setConnectionError(null); // Clear previous errors on new attempt
 
         if (!socket) {
-            console.log("SocketTestPwaage: No active socket instance. Creating new connection to http://localhost:3001");
+            console.log("SocketTestPage: No active socket instance. Creating new connection to http://localhost:3001");
             socket = io("http://localhost:3001", {
-                reconnectionAttempts: 5,
-                reconnectionDelay: 1000,
+                reconnectionAttempts: 3, // Limit reconnection attempts to avoid spamming
+                reconnectionDelay: 2000, // Slightly longer delay
             });
 
             socket.on("connect", () => {
                 console.log("Connected to Socket.IO server:", socket?.id);
                 setChatLog(prev => [...prev, "System: Connected to chat server."]);
                 setIsConnected(true);
+                setConnectionError(null); // Clear error on successful connection
             });
 
             socket.on("chat message", (msg: string) => {
@@ -48,23 +51,28 @@ export default function SocketTestPage() {
                 if (socket?.active || reason === "io client disconnect") { 
                     // No explicit message if socket is being undefined in cleanup.
                 } else {
-                    setChatLog(prev => [...prev, `System: Disconnected from chat server (${reason}). Potential issue or server restart.`]);
+                    const errorMsg = `System: Disconnected from chat server (${reason}). Potential issue or server restart.`;
+                    setChatLog(prev => [...prev, errorMsg]);
+                    setConnectionError(errorMsg);
                     setIsConnected(false);
                 }
             });
 
             socket.on("connect_error", (err) => {
                 console.error("Socket.IO connection error details:", err); // Log the full error object
-                setChatLog(prev => [...prev, `System: Connection error - ${err.message}. Please ensure the socket server (npm run socket:dev) is running.`]);
+                const errorMsg = `System: Connection error - "${err.message}". This usually means the Socket.IO server (run with 'npm run socket:dev') is not running or is unreachable. Please CHECK THE TERMINAL where you started 'npm run socket:dev' for any errors (like 'EADDRINUSE' if port 3001 is busy).`;
+                setChatLog(prev => [...prev, errorMsg]);
+                setConnectionError(errorMsg);
                 setIsConnected(false);
             });
         } else {
              console.log("SocketTestPage: Attempting to use existing socket instance. ID:", socket.id, "Connected:", socket.connected);
              if (!socket.connected) {
                 console.log("SocketTestPage: Existing socket not connected. Calling socket.connect().");
-                socket.connect();
+                socket.connect(); // Attempt to reconnect if instance exists but isn't connected
              } else {
                 setIsConnected(true);
+                setConnectionError(null);
              }
         }
     }
@@ -93,7 +101,9 @@ export default function SocketTestPage() {
       socket.emit("chat message", message);
       setMessage("");
     } else if (!socket?.connected) {
-        setChatLog(prev => [...prev, "System: You are not connected. Message not sent."]);
+        const notConnectedMsg = "System: You are not connected. Message not sent.";
+        setChatLog(prev => [...prev, notConnectedMsg]);
+        setConnectionError(notConnectedMsg + " Please ensure the Socket.IO server is running.");
     }
   };
 
@@ -108,12 +118,17 @@ export default function SocketTestPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {!isConnected && (
+            {connectionError && !isConnected && (
               <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive rounded-md text-sm font-body">
-                <p className="font-semibold">Connection Failed!</p>
-                <p>The chat server at <code>http://localhost:3001</code> is currently unreachable.</p>
-                <p className="mt-1">Please ensure you have started the Socket.IO server by running <code>npm run socket:dev</code> in a separate terminal window and that no firewall is blocking port 3001.</p>
-                <p>Check the console (Ctrl+Shift+J or Cmd+Opt+J) for more detailed error messages.</p>
+                <p className="font-semibold">Connection Issue!</p>
+                <p>{connectionError}</p>
+                <p className="mt-2"><strong>Troubleshooting Steps:</strong></p>
+                <ol className="list-decimal list-inside ml-4 text-xs">
+                    <li>Is the Socket.IO server running? In a separate terminal, execute: <code>npm run socket:dev</code></li>
+                    <li>Check the terminal output of <code>npm run socket:dev</code> for any errors (e.g., "EADDRINUSE" if port 3001 is already taken).</li>
+                    <li>Ensure no firewall is blocking connections to port 3001 on your machine.</li>
+                    <li>Open your browser's developer console (Ctrl+Shift+J or Cmd+Opt+J) and look for more detailed network error messages in the "Console" or "Network" tabs when the page tries to connect.</li>
+                </ol>
               </div>
             )}
             <ScrollArea className="h-72 w-full rounded-md border bg-muted/30 p-4">
@@ -150,7 +165,7 @@ export default function SocketTestPage() {
         <p className="font-headline text-lg text-primary mb-2">How to use this chat:</p>
         <ol className="list-decimal list-inside space-y-1 font-body">
           <li>Start the main Next.js app: <code>npm run dev</code> (if not already running).</li>
-          <li>In a <strong>separate terminal window</strong>, start the Socket.IO server: <code>npm run socket:dev</code>.</li>
+          <li>In a <strong>separate terminal window</strong>, start the Socket.IO server: <code>npm run socket:dev</code>. Watch this terminal for success or error messages from the server.</li>
           <li>Open this page in multiple browser tabs or on different devices connected to your local network (if your firewall allows connections to port 3001) to see real-time communication.</li>
         </ol>
       </div>
