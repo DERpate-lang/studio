@@ -27,7 +27,7 @@ export default function SocketTestPage() {
         console.log("SocketTestPage: useEffect attempting to establish socket connection.");
 
         if (!socket) {
-            console.log("SocketTestPage: No active socket instance. Creating new connection to http://localhost:3001");
+            console.log("SocketTestPwaage: No active socket instance. Creating new connection to http://localhost:3001");
             socket = io("http://localhost:3001", {
                 reconnectionAttempts: 5,
                 reconnectionDelay: 1000,
@@ -45,8 +45,7 @@ export default function SocketTestPage() {
 
             socket.on("disconnect", (reason) => {
                 console.log("Disconnected from Socket.IO server:", reason);
-                // Only update chat log and connection status if the socket was previously active and this isn't part of an intentional unmount cleanup
-                if (socket?.active || reason === "io client disconnect") { // "io client disconnect" means initiated by client
+                if (socket?.active || reason === "io client disconnect") { 
                     // No explicit message if socket is being undefined in cleanup.
                 } else {
                     setChatLog(prev => [...prev, `System: Disconnected from chat server (${reason}). Potential issue or server restart.`]);
@@ -61,13 +60,10 @@ export default function SocketTestPage() {
             });
         } else {
              console.log("SocketTestPage: Attempting to use existing socket instance. ID:", socket.id, "Connected:", socket.connected);
-             // If the existing socket is not connected, explicitly try to connect.
-             // This can help if the page was revisited after a disconnection where auto-reconnects might have stopped.
              if (!socket.connected) {
                 console.log("SocketTestPage: Existing socket not connected. Calling socket.connect().");
                 socket.connect();
              } else {
-                // If already connected, ensure UI reflects this (e.g., if state was lost somehow)
                 setIsConnected(true);
              }
         }
@@ -80,10 +76,9 @@ export default function SocketTestPage() {
         socket.disconnect();
         socket = undefined; // Make sure a new socket is created if the page is revisited
         setIsConnected(false); // Update UI state
-        // setChatLog(prev => [...prev, "System: You have left the chat."]); // Optional: message for leaving
       }
     };
-  }, []); // Empty dependency array ensures this runs for initialization on mount, and cleans up on unmount.
+  }, []); 
 
   useEffect(() => {
     // Auto-scroll to the bottom of the chat log
@@ -113,6 +108,14 @@ export default function SocketTestPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {!isConnected && (
+              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive rounded-md text-sm font-body">
+                <p className="font-semibold">Connection Failed!</p>
+                <p>The chat server at <code>http://localhost:3001</code> is currently unreachable.</p>
+                <p className="mt-1">Please ensure you have started the Socket.IO server by running <code>npm run socket:dev</code> in a separate terminal window and that no firewall is blocking port 3001.</p>
+                <p>Check the console (Ctrl+Shift+J or Cmd+Opt+J) for more detailed error messages.</p>
+              </div>
+            )}
             <ScrollArea className="h-72 w-full rounded-md border bg-muted/30 p-4">
               <div ref={chatLogRef} className="space-y-2">
                 {chatLog.map((msg, index) => (

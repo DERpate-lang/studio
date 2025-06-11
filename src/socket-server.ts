@@ -37,6 +37,9 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.SOCKET_PORT || 3001;
+const HOST = '0.0.0.0'; // Listen on all available network interfaces
+
+console.log(`Attempting to start Socket.IO server on ${HOST}:${PORT}`);
 
 httpServer.on('error', (err: NodeJS.ErrnoException) => {
   console.error('\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
@@ -52,10 +55,11 @@ httpServer.on('error', (err: NodeJS.ErrnoException) => {
   process.exit(1); // Exit if the server can't start
 });
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, HOST, () => {
+  const effectiveHost = HOST === '0.0.0.0' ? 'localhost' : HOST; // For display purposes
   console.log('\n===================================================');
   console.log(`✅ Socket.IO server successfully started.`);
-  console.log(`👂 Listening on: http://localhost:${PORT}`);
+  console.log(`👂 Listening on: http://${effectiveHost}:${PORT} (and other interfaces if HOST is 0.0.0.0)`);
   console.log('Ensure your Next.js app (usually on http://localhost:3000) can reach this address.');
   console.log('To start this server, run "npm run socket:dev" in a separate terminal.');
   console.log('===================================================\n');
@@ -72,4 +76,3 @@ process.on('SIGINT', () => {
     });
   });
 });
-
