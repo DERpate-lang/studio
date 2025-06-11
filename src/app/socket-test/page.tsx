@@ -24,12 +24,13 @@ export default function SocketTestPage() {
   useEffect(() => {
     // Ensure this runs only on the client
     if (typeof window !== "undefined") {
-        // Connect to Socket.IO server only once
+        console.log("SocketTestPage: useEffect attempting to establish socket connection.");
+
         if (!socket) {
-            // Ensure the server URL is correct. For a local setup where the socket server runs on port 3001
+            console.log("SocketTestPage: No active socket instance. Creating new connection to http://localhost:3001");
             socket = io("http://localhost:3001", {
-                reconnectionAttempts: 5, // Try to reconnect 5 times
-                reconnectionDelay: 1000, // Wait 1s before trying to reconnect
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000,
             });
 
             socket.on("connect", () => {
@@ -44,31 +45,45 @@ export default function SocketTestPage() {
 
             socket.on("disconnect", (reason) => {
                 console.log("Disconnected from Socket.IO server:", reason);
-                setChatLog(prev => [...prev, `System: Disconnected from chat server (${reason}).`]);
-                setIsConnected(false);
+                // Only update chat log and connection status if the socket was previously active and this isn't part of an intentional unmount cleanup
+                if (socket?.active || reason === "io client disconnect") { // "io client disconnect" means initiated by client
+                    // No explicit message if socket is being undefined in cleanup.
+                } else {
+                    setChatLog(prev => [...prev, `System: Disconnected from chat server (${reason}). Potential issue or server restart.`]);
+                    setIsConnected(false);
+                }
             });
 
             socket.on("connect_error", (err) => {
-                console.error("Socket.IO connection error:", err.message);
+                console.error("Socket.IO connection error details:", err); // Log the full error object
                 setChatLog(prev => [...prev, `System: Connection error - ${err.message}. Please ensure the socket server (npm run socket:dev) is running.`]);
                 setIsConnected(false);
             });
+        } else {
+             console.log("SocketTestPage: Attempting to use existing socket instance. ID:", socket.id, "Connected:", socket.connected);
+             // If the existing socket is not connected, explicitly try to connect.
+             // This can help if the page was revisited after a disconnection where auto-reconnects might have stopped.
+             if (!socket.connected) {
+                console.log("SocketTestPage: Existing socket not connected. Calling socket.connect().");
+                socket.connect();
+             } else {
+                // If already connected, ensure UI reflects this (e.g., if state was lost somehow)
+                setIsConnected(true);
+             }
         }
     }
 
     // Cleanup on component unmount
     return () => {
-      // Don't disconnect if other components might use the same socket instance later
-      // For a simple page like this, disconnecting is fine.
-      // If you plan a global socket connection, manage this differently (e.g., in a Context).
-      // if (socket?.active) {
-      //   socket.disconnect();
-      //   socket = undefined; // Reset for potential re-connection if page is revisited
-      //   setIsConnected(false);
-      //   setChatLog(prev => [...prev, "System: You have left the chat."]);
-      // }
+      if (socket) {
+        console.log("SocketTestPage: Cleaning up socket (disconnecting and removing instance) on unmount. ID:", socket.id);
+        socket.disconnect();
+        socket = undefined; // Make sure a new socket is created if the page is revisited
+        setIsConnected(false); // Update UI state
+        // setChatLog(prev => [...prev, "System: You have left the chat."]); // Optional: message for leaving
+      }
     };
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []); // Empty dependency array ensures this runs for initialization on mount, and cleans up on unmount.
 
   useEffect(() => {
     // Auto-scroll to the bottom of the chat log
@@ -81,7 +96,6 @@ export default function SocketTestPage() {
     e.preventDefault();
     if (message.trim() && socket?.connected) {
       socket.emit("chat message", message);
-      // setChatLog(prev => [...prev, `You: ${message}`]); // Optimistic update (optional)
       setMessage("");
     } else if (!socket?.connected) {
         setChatLog(prev => [...prev, "System: You are not connected. Message not sent."]);
