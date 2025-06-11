@@ -13,13 +13,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { useToast } from "@/hooks/use-toast";
 import DecorativeBorder from "@/components/decorative-border";
 import { Card } from "@/components/ui/card";
-
-
-const initialPhotos: Photo[] = [];
-
+import { supabase } from "@/lib/supabaseClient";
 
 export default function GalleryPage() {
-  const [photos, setPhotos] = useState<Photo[]>(initialPhotos);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [newPhotoCaption, setNewPhotoCaption] = useState("");
@@ -30,43 +27,36 @@ export default function GalleryPage() {
 
   useEffect(() => {
     setIsClient(true);
-    const storedPhotos = localStorage.getItem("galleryPhotos");
-    if (storedPhotos) {
-      try {
-        setPhotos(JSON.parse(storedPhotos));
-      } catch (e) {
-        console.error("Error parsing photos from localStorage", e);
-        setPhotos(initialPhotos);
-        localStorage.setItem("galleryPhotos", JSON.stringify(initialPhotos));
-      }
-    } else {
-      setPhotos(initialPhotos);
-      localStorage.setItem("galleryPhotos", JSON.stringify(initialPhotos));
-    }
+    fetchPhotos();
   }, []);
 
-  const savePhotosToLocalStorage = (updatedPhotos: Photo[]): boolean => {
+  const fetchPhotos = async () => {
+    setIsLoading(true);
     try {
-      localStorage.setItem("galleryPhotos", JSON.stringify(updatedPhotos));
-      return true;
-    } catch (error: any) {
-      if (error.name === 'QuotaExceededError' || error.code === 22 || error.code === 1014) {
-        toast({
-          title: "Storage Limit Reached",
-          description: "Your browser's local storage is full. Please remove some photos or try smaller images.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error Saving Photos",
-          description: "Could not save photos to local storage.",
-          variant: "destructive",
-        });
-        console.error("Error saving photos to localStorage:", error);
+      const { data, error } = await supabase
+        .from("gallery_photos")
+        .select("*")
+        .order("date_added", { ascending: false });
+
+      if (error) {
+        throw error;
       }
-      return false;
+      if (data) {
+        setPhotos(data as Photo[]);
+      }
+    } catch (error: any) {
+      console.error("Error fetching photos from Supabase:", error);
+      toast({
+        title: "Error Fetching Photos",
+        description: error.message || "Could not load photos from the database.",
+        variant: "destructive",
+      });
+      setPhotos([]); // Set to empty array on error
+    } finally {
+      setIsLoading(false);
     }
   };
+
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -84,15 +74,13 @@ export default function GalleryPage() {
     setIsLoading(true);
 
     const newPhotosPromises = selectedFiles.map(file => {
-      return new Promise<Photo | null>((resolve) => {
+      return new Promise<{ url: string; caption: string; "data-ai-hint": string } | null>((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => {
           resolve({
-            id: `${Date.now().toString()}-${file.name}-${Math.random().toString(36).substring(2, 7)}`,
             url: reader.result as string,
-            caption: newPhotoCaption,
-            dateAdded: new Date().toISOString(),
-            "data-ai-hint": "uploaded image"
+            caption: newPhotoCaption, // Apply common caption
+            "data-ai-hint": "uploaded image" // Common AI hint
           });
         };
         reader.onerror = () => {
@@ -105,25 +93,44 @@ export default function GalleryPage() {
 
     try {
       const results = await Promise.all(newPhotosPromises);
-      const successfullyReadPhotos = results.filter(photo => photo !== null) as Photo[];
+      const successfullyReadPhotoData = results.filter(data => data !== null) as { url: string; caption: string; "data-ai-hint": string }[];
 
-      if (successfullyReadPhotos.length === 0 && selectedFiles.length > 0) {
+      if (successfullyReadPhotoData.length === 0 && selectedFiles.length > 0) {
         toast({ title: "No Photos Processed", description: "Could not process any of the selected files.", variant: "default" });
         setIsLoading(false);
         return;
       }
 
-      if (successfullyReadPhotos.length > 0) {
-        const potentialUpdatedPhotos = [...successfullyReadPhotos, ...photos];
-        if (savePhotosToLocalStorage(potentialUpdatedPhotos)) {
-          setPhotos(potentialUpdatedPhotos);
-          toast({ title: "Success", description: `${successfullyReadPhotos.length} photo(s) added to gallery!` });
+      if (successfullyReadPhotoData.length > 0) {
+        const photosToInsert = successfullyReadPhotoData.map(pData => ({
+          url: pData.url,
+          caption: pData.caption,
+          data_ai_hint: pData["data-ai-hint"],
+          // id and date_added will be generated by Supabase
+        }));
+
+        const { data: insertedPhotos, error } = await supabase
+          .from("gallery_photos")
+          .insert(photosToInsert)
+          .select();
+
+        if (error) {
+          throw error;
+        }
+
+        if (insertedPhotos) {
+          setPhotos(prevPhotos => [...(insertedPhotos as Photo[]), ...prevPhotos].sort((a,b) => new Date(b.date_added).getTime() - new Date(a.date_added).getTime()));
+          toast({ title: "Success", description: `${insertedPhotos.length} photo(s) added to gallery and saved to database!` });
           setIsDialogOpen(false);
         }
       }
-    } catch (error) {
-      console.error("Error processing files batch:", error);
-      toast({ title: "Batch Error", description: "An unexpected error occurred while processing photos.", variant: "destructive" });
+    } catch (error: any) {
+      console.error("Error adding photos to Supabase:", error);
+      toast({
+        title: "Database Error",
+        description: error.message || "Could not save photos to the database.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
       setSelectedFiles([]);
@@ -134,15 +141,31 @@ export default function GalleryPage() {
     }
   };
 
-  const handleDeletePhoto = (id: string) => {
-    if (confirm("Are you sure you want to delete this photo?")) {
-      const updatedPhotos = photos.filter(p => p.id !== id);
-      setPhotos(updatedPhotos); // Update UI immediately
+  const handleDeletePhoto = async (id: string) => {
+    if (confirm("Are you sure you want to delete this photo from the database?")) {
+      setIsLoading(true);
+      try {
+        const { error } = await supabase
+          .from("gallery_photos")
+          .delete()
+          .match({ id: id });
 
-      if (savePhotosToLocalStorage(updatedPhotos)) {
-        toast({ title: "Success", description: "Photo removed from gallery and changes saved." });
+        if (error) {
+          throw error;
+        }
+
+        setPhotos(prevPhotos => prevPhotos.filter(p => p.id !== id));
+        toast({ title: "Success", description: "Photo removed from gallery and database." });
+      } catch (error: any) {
+        console.error("Error deleting photo from Supabase:", error);
+        toast({
+          title: "Database Error",
+          description: error.message || "Could not delete photo from the database.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
-      // If savePhotosToLocalStorage returns false, it has already shown an error toast.
     }
   };
 
@@ -208,7 +231,13 @@ export default function GalleryPage() {
         </DialogContent>
       </Dialog>
 
-      {photos.length === 0 ? (
+      {isLoading && photos.length === 0 && (
+        <div className="flex justify-center items-center h-40">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      )}
+
+      {!isLoading && photos.length === 0 ? (
          <DecorativeBorder className="text-center">
             <p className="font-body text-lg text-foreground/70 p-8">Your gallery is empty. Add some photos to start your visual journey!</p>
         </DecorativeBorder>
@@ -223,7 +252,7 @@ export default function GalleryPage() {
               sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
               style={{ objectFit: "cover" }}
               className="transition-transform duration-500 group-hover:scale-110"
-              data-ai-hint={(photo as any)['data-ai-hint'] || "gallery image"}
+              data-ai-hint={photo['data_ai_hint'] || "gallery image"}
               unoptimized={photo.url.startsWith('data:image')}
             />
             {photo.caption && (
@@ -246,3 +275,5 @@ export default function GalleryPage() {
     </PageContainer>
   );
 }
+
+    
