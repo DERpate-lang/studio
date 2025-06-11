@@ -16,8 +16,7 @@ import {
   GalleryVertical,
   Milestone,
   Wand2,
-  MessageSquare,
-  Disc3, // Added Disc3 icon for Gramophone
+  Disc3, 
   type LucideProps,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -37,8 +36,7 @@ const navItems: NavItem[] = [
   { href: "/gallery", label: "Photo Gallery", icon: GalleryVertical },
   { href: "/milestones", label: "Milestones", icon: Milestone },
   { href: "/love-letter-generator", label: "Love Letter AI", icon: Wand2 },
-  { href: "/gramophone", label: "Music Player", icon: Disc3 }, // Added Gramophone link
-  { href: "/socket-test", label: "Chat Test", icon: MessageSquare },
+  { href: "/gramophone", label: "Music Player", icon: Disc3 },
 ];
 
 export function SidebarNav() {
