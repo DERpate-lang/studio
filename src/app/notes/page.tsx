@@ -22,12 +22,13 @@ export default function LoveNotesPage() {
   const [currentNote, setCurrentNote] = useState<Partial<LoveNote>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const { toast } = useToast();
 
   const notesCollectionRef = collection(db, "love_notes");
 
   const fetchNotes = async () => {
-    setIsLoading(true);
+    setIsFetching(true);
     try {
       const q = query(notesCollectionRef, orderBy("date", "desc"));
       const data = await getDocs(q);
@@ -35,9 +36,9 @@ export default function LoveNotesPage() {
       setNotes(fetchedNotes);
     } catch (error: any) {
       console.error("Error fetching notes from Firestore:", error);
-      toast({ title: "Error Fetching Notes", description: error.message || "Could not fetch notes.", variant: "destructive" });
+      toast({ title: "Error Fetching Notes", description: error.message || "Could not fetch notes. Check Firestore setup and security rules.", variant: "destructive" });
     } finally {
-      setIsLoading(false);
+      setIsFetching(false);
     }
   };
 
@@ -57,13 +58,13 @@ export default function LoveNotesPage() {
     }
     setIsLoading(true);
 
-    const noteDataToSave = {
-      title: currentNote.title || null,
-      content: currentNote.content!,
-      date: Timestamp.now(), 
-    };
-
     try {
+      const noteDataToSave = {
+        title: currentNote.title || null,
+        content: currentNote.content!,
+        date: Timestamp.now(), 
+      };
+
       if (isEditing && currentNote.id) {
         const noteDoc = doc(db, "love_notes", currentNote.id);
         await updateDoc(noteDoc, noteDataToSave);
@@ -76,7 +77,7 @@ export default function LoveNotesPage() {
       resetFormAndDialog();
     } catch (error: any) {
       console.error("Error saving note to Firestore:", error);
-      toast({ title: "Database Error", description: error.message || "Could not save note.", variant: "destructive" });
+      toast({ title: "Database Error", description: error.message || "Could not save note. Check Firestore rules and network.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -102,19 +103,20 @@ export default function LoveNotesPage() {
   };
 
   const handleDelete = async (id: string) => {
-     if (confirm("Are you sure you want to delete this note from the database?")) {
-      setIsLoading(true);
-      try {
-        const noteDoc = doc(db, "love_notes", id);
-        await deleteDoc(noteDoc);
-        toast({ title: "Success", description: "Love note deleted." });
-        fetchNotes(); 
-      } catch (error: any) {
-        console.error("Error deleting note from Firestore:", error);
-        toast({ title: "Database Error", description: error.message || "Could not delete note.", variant: "destructive" });
-      } finally {
-        setIsLoading(false);
-      }
+     if (!confirm("Are you sure you want to delete this note from the database?")) {
+        return;
+     }
+    setIsLoading(true);
+    try {
+      const noteDoc = doc(db, "love_notes", id);
+      await deleteDoc(noteDoc);
+      toast({ title: "Success", description: "Love note deleted." });
+      fetchNotes(); 
+    } catch (error: any) {
+      console.error("Error deleting note from Firestore:", error);
+      toast({ title: "Database Error", description: error.message || "Could not delete note.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -125,7 +127,7 @@ export default function LoveNotesPage() {
         setIsDialogOpen(isOpen);
       }}>
         <DialogTrigger asChild>
-          <Button onClick={openAddDialog} className="mb-6 bg-primary hover:bg-primary/90 text-primary-foreground font-body">
+          <Button onClick={openAddDialog} className="mb-6 bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isFetching}>
             <PlusCircle className="mr-2 h-5 w-5" /> Write New Note
           </Button>
         </DialogTrigger>
@@ -147,9 +149,9 @@ export default function LoveNotesPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-               <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" onClick={() => setIsLoading(false)} disabled={isLoading}>Cancel</Button>
+               <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" onClick={() => { if(isLoading) setIsLoading(false); }} disabled={isLoading && !isFetching}>Cancel</Button>
             </DialogClose>
-            <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isLoading}>
+            <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isLoading || isFetching}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isEditing ? "Save Changes" : "Save Note"}
             </Button>
@@ -157,13 +159,13 @@ export default function LoveNotesPage() {
         </DialogContent>
       </Dialog>
 
-      {isLoading && notes.length === 0 && (
+      {isFetching && notes.length === 0 && (
          <div className="flex justify-center items-center h-40">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       )}
 
-      {!isLoading && notes.length === 0 ? (
+      {!isFetching && notes.length === 0 ? (
         <DecorativeBorder className="text-center">
             <p className="font-body text-lg text-foreground/70 p-8">No love notes yet. Write your first message to your beloved!</p>
         </DecorativeBorder>
@@ -177,3 +179,5 @@ export default function LoveNotesPage() {
     </PageContainer>
   );
 }
+
+    

@@ -14,9 +14,9 @@ import { useToast } from "@/hooks/use-toast";
 import DecorativeBorder from "@/components/decorative-border";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/lib/supabaseClient";
-import { v4 as uuidv4 } from 'uuid'; // For generating unique file names
+import { v4 as uuidv4 } from 'uuid'; 
 
-const SUPABASE_GALLERY_BUCKET = "gallery-photos"; // Define your bucket name
+const SUPABASE_GALLERY_BUCKET = "gallery-photos"; 
 
 export default function GalleryPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -24,6 +24,7 @@ export default function GalleryPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [newPhotoCaption, setNewPhotoCaption] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const [isClient, setIsClient] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -34,7 +35,7 @@ export default function GalleryPage() {
   }, []);
 
   const fetchPhotos = async () => {
-    setIsLoading(true);
+    setIsFetching(true);
     try {
       const { data, error } = await supabase
         .from("gallery_photos")
@@ -51,12 +52,12 @@ export default function GalleryPage() {
       console.error("Error fetching photos from Supabase DB:", error);
       toast({
         title: "Error Fetching Photos",
-        description: error.message || "Could not load photos from the database.",
+        description: error.message || "Could not load photos. Check Supabase setup and RLS policies.",
         variant: "destructive",
       });
-      setPhotos([]);
+      setPhotos([]); // Clear photos on error
     } finally {
-      setIsLoading(false);
+      setIsFetching(false);
     }
   };
 
@@ -70,67 +71,67 @@ export default function GalleryPage() {
 
   const handleAddPhoto = async () => {
     if (selectedFiles.length === 0) {
-      toast({ title: "Error", description: "Please select image file(s).", variant: "destructive" });
+      toast({ title: "No Files Selected", description: "Please select image file(s) to upload.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
 
-    const uploadPromises = selectedFiles.map(async (file) => {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${uuidv4()}.${fileExt}`;
-      const filePath = fileName; // Simplified file path (no 'public/' prefix)
+    let successfullyUploadedPhotosData: { url: string; caption: string; data_ai_hint: string; file_path: string }[] = [];
 
-      try {
-        // Upload file to Supabase Storage
-        const { error: uploadError } = await supabase.storage
-          .from(SUPABASE_GALLERY_BUCKET)
-          .upload(filePath, file);
+    try {
+      const uploadPromises = selectedFiles.map(async (file) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${uuidv4()}.${fileExt}`;
+        const filePath = fileName; 
 
-        if (uploadError) {
-          console.error(`Supabase Storage upload error for ${file.name}:`, uploadError);
-          toast({
-              title: `Storage Upload Failed: ${file.name}`,
-              description: `Error: ${uploadError.message}. Please check bucket permissions and RLS policies on storage.objects.`,
-              variant: "destructive",
-          });
-          return null;
-        }
+        try {
+          const { error: uploadError } = await supabase.storage
+            .from(SUPABASE_GALLERY_BUCKET)
+            .upload(filePath, file);
 
-        // Get public URL for the uploaded file
-        const { data: urlData } = supabase.storage
-          .from(SUPABASE_GALLERY_BUCKET)
-          .getPublicUrl(filePath);
-
-        if (!urlData || !urlData.publicUrl) {
-            console.error(`Failed to get public URL for ${filePath}`);
+          if (uploadError) {
+            console.error(`Supabase Storage upload error for ${file.name}:`, uploadError);
             toast({
-                title: `URL Retrieval Error: ${file.name}`,
-                description: "Could not get public URL after upload. The file might not be accessible or storage policies might be too restrictive.",
+                title: `Storage Upload Failed: ${file.name}`,
+                description: `Error: ${uploadError.message}. Check bucket/RLS policies for storage.objects.`,
                 variant: "destructive",
             });
             return null;
-        }
-        
-        return {
-          url: urlData.publicUrl,
-          caption: newPhotoCaption,
-          data_ai_hint: "uploaded image",
-          file_path: filePath, // Store the path for potential deletion
-        };
-      } catch (error: any) { // Catch any other unexpected error during this file's processing
-        console.error(`Unexpected error processing ${file.name}:`, error);
-        toast({ title: `Processing Error: ${file.name}`, description: error.message || "An unexpected error occurred.", variant: "destructive" });
-        return null;
-      }
-    });
+          }
 
-    try {
+          const { data: urlData } = supabase.storage
+            .from(SUPABASE_GALLERY_BUCKET)
+            .getPublicUrl(filePath);
+
+          if (!urlData || !urlData.publicUrl) {
+              console.error(`Failed to get public URL for ${filePath}`);
+              toast({
+                  title: `URL Retrieval Error: ${file.name}`,
+                  description: "Could not get public URL after upload.",
+                  variant: "destructive",
+              });
+              return null;
+          }
+          
+          return {
+            url: urlData.publicUrl,
+            caption: newPhotoCaption,
+            data_ai_hint: "uploaded image",
+            file_path: filePath, 
+          };
+        } catch (innerError: any) { 
+          console.error(`Unexpected error processing ${file.name}:`, innerError);
+          toast({ title: `Processing Error: ${file.name}`, description: innerError.message || "An unexpected error occurred.", variant: "destructive" });
+          return null;
+        }
+      });
+
       const results = await Promise.all(uploadPromises);
-      const successfullyUploadedPhotosData = results.filter(data => data !== null) as { url: string; caption: string; data_ai_hint: string, file_path: string }[];
+      successfullyUploadedPhotosData = results.filter(data => data !== null) as { url: string; caption: string; data_ai_hint: string, file_path: string }[];
 
       if (successfullyUploadedPhotosData.length === 0 && selectedFiles.length > 0) {
-        toast({ title: "No Photos Uploaded", description: "Could not process and upload any of the selected files. Check previous error messages for details.", variant: "default" });
-        setIsLoading(false);
+        toast({ title: "No Photos Uploaded", description: "None of the selected files could be processed and uploaded.", variant: "default" });
+        // setIsLoading(false) will be handled by finally block
         return;
       }
 
@@ -151,34 +152,42 @@ export default function GalleryPage() {
           console.error("Supabase DB insert error:", dbError);
           toast({
               title: "Database Save Failed",
-              description: `Could not save photo metadata to database. Error: ${dbError.message}. Please check table RLS policies.`,
+              description: `Could not save photo metadata. Error: ${dbError.message}. Check table RLS policies.`,
               variant: "destructive",
           });
           // Note: Successfully uploaded files to storage are not deleted here if DB insert fails.
-          // This could be added as a cleanup step if necessary.
-          setIsLoading(false); // Ensure loading state is reset
-          return; // Exit if DB insert fails
+          return; 
         }
 
         if (insertedPhotos) {
+          // No need to call fetchPhotos() here if we manually update state
+          // This avoids an extra fetch and potential flicker
           setPhotos(prevPhotos => [...(insertedPhotos as Photo[]), ...prevPhotos].sort((a,b) => new Date(b.date_added).getTime() - new Date(a.date_added).getTime()));
-          toast({ title: "Success", description: `${insertedPhotos.length} photo(s) uploaded and saved to database!` });
-          setIsDialogOpen(false);
+          toast({ title: "Success", description: `${insertedPhotos.length} photo(s) uploaded and saved!` });
+          setIsDialogOpen(false); // Close dialog on success
+          setSelectedFiles([]); // Reset file selections
+          setNewPhotoCaption("");
+          if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+          }
         }
       }
-    } catch (error: any) { // Catch for Promise.all or other unexpected errors in this block
-      console.error("Error in photo addition process (outer try-catch):", error);
+    } catch (error: any) { 
+      console.error("Error in photo addition process:", error);
       toast({
         title: "Photo Addition Process Error",
-        description: error.message || "An unexpected error occurred while finalizing photo additions.",
+        description: error.message || "An unexpected error occurred.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
-      setSelectedFiles([]);
-      setNewPhotoCaption("");
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      // Only reset form fields if dialog is not closed due to success
+      if (isDialogOpen) { 
+        setSelectedFiles([]);
+        setNewPhotoCaption("");
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       }
     }
   };
@@ -188,45 +197,44 @@ export default function GalleryPage() {
         toast({title: "Error", description: "Photo information is incomplete for deletion.", variant: "destructive"});
         return;
     }
-    if (confirm("Are you sure you want to delete this photo? This will remove it from storage and the database.")) {
-      setIsLoading(true);
-      try {
-        // 1. Delete from Supabase Storage
-        const { error: storageError } = await supabase.storage
-          .from(SUPABASE_GALLERY_BUCKET)
-          .remove([photo.file_path]);
+    if (!confirm("Are you sure you want to delete this photo? This will remove it from storage and the database.")) {
+        return;
+    }
+    setIsLoading(true);
+    try {
+      const { error: storageError } = await supabase.storage
+        .from(SUPABASE_GALLERY_BUCKET)
+        .remove([photo.file_path]);
 
-        if (storageError) {
-          console.error("Error deleting photo from Supabase Storage:", storageError);
-          toast({
-            title: "Storage Deletion Warning",
-            description: `Could not delete file from storage: ${storageError.message}. Attempting to remove from database.`,
-            variant: "default"
-          });
-        }
-
-        // 2. Delete from Supabase Database
-        const { error: dbError } = await supabase
-          .from("gallery_photos")
-          .delete()
-          .match({ id: photo.id });
-
-        if (dbError) {
-          throw dbError;
-        }
-
-        setPhotos(prevPhotos => prevPhotos.filter(p => p.id !== photo.id));
-        toast({ title: "Success", description: "Photo removed from gallery, storage, and database." });
-      } catch (error: any) {
-        console.error("Error deleting photo:", error);
+      if (storageError) {
+        console.error("Error deleting photo from Supabase Storage:", storageError);
         toast({
-          title: "Deletion Error",
-          description: error.message || "Could not delete photo.",
-          variant: "destructive",
+          title: "Storage Deletion Warning",
+          description: `Could not delete file from storage: ${storageError.message}. Attempting to remove from database.`,
+          variant: "default" 
         });
-      } finally {
-        setIsLoading(false);
       }
+
+      const { error: dbError } = await supabase
+        .from("gallery_photos")
+        .delete()
+        .match({ id: photo.id });
+
+      if (dbError) {
+        throw dbError; // This will be caught by the outer catch block
+      }
+
+      setPhotos(prevPhotos => prevPhotos.filter(p => p.id !== photo.id));
+      toast({ title: "Success", description: "Photo removed from gallery, storage, and database." });
+    } catch (error: any) {
+      console.error("Error deleting photo:", error);
+      toast({
+        title: "Deletion Error",
+        description: error.message || "Could not delete photo. Check RLS policies.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -243,7 +251,7 @@ export default function GalleryPage() {
         }
       }}>
         <DialogTrigger asChild>
-          <Button className="mb-6 bg-primary hover:bg-primary/90 text-primary-foreground font-body">
+          <Button className="mb-6 bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isFetching}>
             {isClient && <PlusCircle className="mr-2 h-5 w-5" />}
             Add New Photo(s)
           </Button>
@@ -281,9 +289,9 @@ export default function GalleryPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" disabled={isLoading}>Cancel</Button>
+              <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" onClick={() => { if(isLoading) setIsLoading(false); }} disabled={isLoading && !isFetching}>Cancel</Button>
             </DialogClose>
-            <Button onClick={handleAddPhoto} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isLoading || selectedFiles.length === 0}>
+            <Button onClick={handleAddPhoto} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isLoading || isFetching || selectedFiles.length === 0}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Add Photo(s)
             </Button>
@@ -291,13 +299,13 @@ export default function GalleryPage() {
         </DialogContent>
       </Dialog>
 
-      {isLoading && photos.length === 0 && (
+      {isFetching && photos.length === 0 && (
         <div className="flex justify-center items-center h-40">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       )}
 
-      {!isLoading && photos.length === 0 ? (
+      {!isFetching && photos.length === 0 ? (
          <DecorativeBorder className="text-center">
             <p className="font-body text-lg text-foreground/70 p-8">Your gallery is empty. Add some photos to start your visual journey!</p>
         </DecorativeBorder>
@@ -324,6 +332,7 @@ export default function GalleryPage() {
               size="icon"
               className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-8 w-8"
               onClick={() => handleDeletePhoto(photo)}
+              disabled={isLoading || isFetching}
             >
               {isClient && <Trash2 className="h-4 w-4" />}
             </Button>
@@ -335,3 +344,4 @@ export default function GalleryPage() {
   );
 }
 
+    

@@ -28,6 +28,10 @@ const milestoneIcons = [
 const formatTimestampForInput = (timestamp: Timestamp | string | undefined): string => {
   if (!timestamp) return new Date().toISOString().split('T')[0];
   if (typeof timestamp === 'string') {
+     // Check if it's already in yyyy-MM-dd format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(timestamp)) {
+        return timestamp;
+    }
     try {
       return format(parseISO(timestamp), "yyyy-MM-dd");
     } catch {
@@ -43,22 +47,30 @@ export default function MilestonesPage() {
   const [currentMilestone, setCurrentMilestone] = useState<Partial<Milestone>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const { toast } = useToast();
 
   const milestonesCollectionRef = collection(db, "milestones");
 
   const fetchMilestones = async () => {
-    setIsLoading(true);
+    setIsFetching(true);
     try {
       const q = query(milestonesCollectionRef, orderBy("date", "desc"));
       const data = await getDocs(q);
-      const fetchedMilestones = data.docs.map((doc) => ({ ...doc.data(), id: doc.id } as Milestone));
+      const fetchedMilestones = data.docs.map((doc) => {
+        const docData = doc.data();
+        return { 
+            ...docData, 
+            id: doc.id,
+            date: docData.date // Keep as Firestore Timestamp initially
+        } as Milestone;
+      });
       setMilestones(fetchedMilestones);
     } catch (error: any) {
       console.error("Error fetching milestones from Firestore:", error);
-      toast({ title: "Error Fetching Milestones", description: error.message || "Could not fetch milestones.", variant: "destructive" });
+      toast({ title: "Error Fetching Milestones", description: error.message || "Could not fetch milestones. Check Firestore setup and security rules.", variant: "destructive" });
     } finally {
-      setIsLoading(false);
+      setIsFetching(false);
     }
   };
 
@@ -82,16 +94,20 @@ export default function MilestonesPage() {
     }
     setIsLoading(true);
 
-    const dateAsTimestamp = Timestamp.fromDate(parseISO(currentMilestone.date as string));
-    
-    const milestoneDataToSave = {
-      title: currentMilestone.title!,
-      date: dateAsTimestamp,
-      description: currentMilestone.description!,
-      icon: currentMilestone.icon || "default",
-    };
-
     try {
+      let dateString = currentMilestone.date;
+      if (typeof dateString !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+         dateString = formatTimestampForInput(currentMilestone.date);
+      }
+      const dateAsTimestamp = Timestamp.fromDate(parseISO(dateString));
+    
+      const milestoneDataToSave = {
+        title: currentMilestone.title!,
+        date: dateAsTimestamp,
+        description: currentMilestone.description!,
+        icon: currentMilestone.icon || "default",
+      };
+
       if (isEditing && currentMilestone.id) {
         const milestoneDoc = doc(db, "milestones", currentMilestone.id);
         await updateDoc(milestoneDoc, milestoneDataToSave);
@@ -104,7 +120,7 @@ export default function MilestonesPage() {
       resetFormAndDialog();
     } catch (error: any) {
       console.error("Error saving milestone to Firestore:", error);
-      toast({ title: "Database Error", description: error.message || "Could not save milestone.", variant: "destructive" });
+      toast({ title: "Database Error", description: error.message || "Could not save milestone. Check Firestore rules and network.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -134,19 +150,20 @@ export default function MilestonesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this milestone from the database?")) {
-      setIsLoading(true);
-      try {
-        const milestoneDoc = doc(db, "milestones", id);
-        await deleteDoc(milestoneDoc);
-        toast({ title: "Success", description: "Milestone deleted." });
-        fetchMilestones();
-      } catch (error: any) {
-        console.error("Error deleting milestone from Firestore:", error);
-        toast({ title: "Database Error", description: error.message || "Could not delete milestone.", variant: "destructive" });
-      } finally {
-        setIsLoading(false);
-      }
+    if (!confirm("Are you sure you want to delete this milestone from the database?")) {
+        return;
+    }
+    setIsLoading(true);
+    try {
+      const milestoneDoc = doc(db, "milestones", id);
+      await deleteDoc(milestoneDoc);
+      toast({ title: "Success", description: "Milestone deleted." });
+      fetchMilestones();
+    } catch (error: any) {
+      console.error("Error deleting milestone from Firestore:", error);
+      toast({ title: "Database Error", description: error.message || "Could not delete milestone.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -157,7 +174,7 @@ export default function MilestonesPage() {
           setIsDialogOpen(isOpen);
         }}>
         <DialogTrigger asChild>
-          <Button onClick={openAddDialog} className="mb-6 bg-primary hover:bg-primary/90 text-primary-foreground font-body">
+          <Button onClick={openAddDialog} className="mb-6 bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isFetching}>
             <PlusCircle className="mr-2 h-5 w-5" /> Add New Milestone
           </Button>
         </DialogTrigger>
@@ -174,7 +191,7 @@ export default function MilestonesPage() {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="date" className="text-right text-foreground/80">Date</Label>
-              <Input id="date" name="date" type="date" value={currentMilestone.date as string || ""} onChange={handleInputChange} className="col-span-3" />
+              <Input id="date" name="date" type="date" value={formatTimestampForInput(currentMilestone.date)} onChange={handleInputChange} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="description" className="text-right text-foreground/80">Description</Label>
@@ -196,9 +213,9 @@ export default function MilestonesPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" onClick={() => setIsLoading(false)} disabled={isLoading}>Cancel</Button>
+              <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" onClick={() => { if(isLoading) setIsLoading(false); }} disabled={isLoading && !isFetching}>Cancel</Button>
             </DialogClose>
-            <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isLoading}>
+            <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isLoading || isFetching}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isEditing ? "Save Changes" : "Save Milestone"}
             </Button>
@@ -206,13 +223,13 @@ export default function MilestonesPage() {
         </DialogContent>
       </Dialog>
       
-      {isLoading && milestones.length === 0 && (
+      {isFetching && milestones.length === 0 && (
          <div className="flex justify-center items-center h-40">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       )}
 
-      {!isLoading && milestones.length === 0 ? (
+      {!isFetching && milestones.length === 0 ? (
         <DecorativeBorder className="text-center">
             <p className="font-body text-lg text-foreground/70 p-8">No milestones recorded yet. Add the important moments that shaped your journey!</p>
         </DecorativeBorder>
@@ -226,3 +243,5 @@ export default function MilestonesPage() {
     </PageContainer>
   );
 }
+
+    
