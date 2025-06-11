@@ -50,7 +50,7 @@ export default function SocketTestPage() {
 
             socket.on("connect_error", (err) => {
                 console.error("Socket.IO connection error:", err.message);
-                setChatLog(prev => [...prev, `System: Connection error - ${err.message}`]);
+                setChatLog(prev => [...prev, `System: Connection error - ${err.message}. Please ensure the socket server (npm run socket:dev) is running.`]);
                 setIsConnected(false);
             });
         }
