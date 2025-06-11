@@ -1,8 +1,5 @@
 // next.config.js
 module.exports = {
-  experimental: {
-    serverActions: true,
-  },
   images: {
     remotePatterns: [
       {
@@ -19,5 +16,7 @@ module.exports = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // No `output: 'export'` here!
+  // Server Actions are stable and enabled by default in Next.js 14+
+  // The old experimental.serverActions flag is no longer needed or structured differently.
+  // Removing it relies on the default behavior.
 };
