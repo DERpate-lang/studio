@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle, Loader2, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { MusicPlayer } from "@/components/music-player";
 import DecorativeBorder from "@/components/decorative-border";
 import { Card } from "@/components/ui/card";
 
@@ -150,10 +149,6 @@ export default function GalleryPage() {
 
   return (
     <PageContainer title="Our Photo Gallery">
-      <div className="mb-8">
-        {isClient && <MusicPlayer />}
-      </div>
-
       <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
         setIsDialogOpen(isOpen);
         if (!isOpen) {
