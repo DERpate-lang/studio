@@ -37,18 +37,39 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.SOCKET_PORT || 3001;
+
+httpServer.on('error', (err: NodeJS.ErrnoException) => {
+  console.error('\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+  console.error('!!! Socket.IO HTTP Server Error                   !!!');
+  console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+  console.error(err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\nError: Port ${PORT} is already in use.`);
+    console.error('Another application might be using this port, or another instance of this socket server might already be running.');
+    console.error('Please check your running processes or try a different port.');
+  }
+  console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n');
+  process.exit(1); // Exit if the server can't start
+});
+
 httpServer.listen(PORT, () => {
-  console.log(`Socket.IO server listening on http://localhost:${PORT}`);
+  console.log('\n===================================================');
+  console.log(`✅ Socket.IO server successfully started.`);
+  console.log(`👂 Listening on: http://localhost:${PORT}`);
+  console.log('Ensure your Next.js app (usually on http://localhost:3000) can reach this address.');
+  console.log('To start this server, run "npm run socket:dev" in a separate terminal.');
+  console.log('===================================================\n');
 });
 
 // Graceful shutdown (optional but good practice)
 process.on('SIGINT', () => {
-  console.log('Shutting down Socket.IO server...');
+  console.log('\nShutting down Socket.IO server...');
   io.close(() => {
-    console.log('Socket.IO server closed.');
+    console.log('Socket.IO server connections closed.');
     httpServer.close(() => {
       console.log('HTTP server closed.');
       process.exit(0);
     });
   });
 });
+
