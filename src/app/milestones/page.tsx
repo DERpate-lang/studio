@@ -25,7 +25,6 @@ const milestoneIcons = [
   { value: "travel", label: "Our Adventures" },
 ];
 
-// Helper to convert Firestore Timestamp to ISO string date for date inputs
 const formatTimestampForInput = (timestamp: Timestamp | string | undefined): string => {
   if (!timestamp) return new Date().toISOString().split('T')[0];
   if (typeof timestamp === 'string') {
@@ -57,7 +56,7 @@ export default function MilestonesPage() {
       setMilestones(fetchedMilestones);
     } catch (error: any) {
       console.error("Error fetching milestones from Firestore:", error);
-      toast({ title: "Error", description: "Could not fetch milestones.", variant: "destructive" });
+      toast({ title: "Error Fetching Milestones", description: error.message || "Could not fetch milestones.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -78,7 +77,7 @@ export default function MilestonesPage() {
 
   const handleSubmit = async () => {
     if (!currentMilestone.title || !currentMilestone.date || !currentMilestone.description) {
-      toast({ title: "Error", description: "Please fill in title, date, and description.", variant: "destructive" });
+      toast({ title: "Validation Error", description: "Please fill in title, date, and description.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
@@ -118,12 +117,14 @@ export default function MilestonesPage() {
   };
 
   const openAddDialog = () => {
+    resetFormAndDialog();
     setCurrentMilestone({ date: new Date().toISOString().split('T')[0], icon: "default" });
     setIsEditing(false);
     setIsDialogOpen(true);
   };
 
   const openEditDialog = (milestone: Milestone) => {
+    resetFormAndDialog();
     setCurrentMilestone({
         ...milestone,
         date: formatTimestampForInput(milestone.date),
@@ -195,11 +196,11 @@ export default function MilestonesPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" disabled={isLoading}>Cancel</Button>
+              <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" onClick={() => setIsLoading(false)} disabled={isLoading}>Cancel</Button>
             </DialogClose>
             <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Save Milestone
+                {isEditing ? "Save Changes" : "Save Milestone"}
             </Button>
           </DialogFooter>
         </DialogContent>

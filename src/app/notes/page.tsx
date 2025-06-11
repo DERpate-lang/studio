@@ -35,7 +35,7 @@ export default function LoveNotesPage() {
       setNotes(fetchedNotes);
     } catch (error: any) {
       console.error("Error fetching notes from Firestore:", error);
-      toast({ title: "Error", description: "Could not fetch notes.", variant: "destructive" });
+      toast({ title: "Error Fetching Notes", description: error.message || "Could not fetch notes.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -51,16 +51,16 @@ export default function LoveNotesPage() {
   };
 
   const handleSubmit = async () => {
-    if (!currentNote.content) {
-      toast({ title: "Error", description: "Note content cannot be empty.", variant: "destructive" });
+    if (!currentNote.content || currentNote.content.trim() === "") {
+      toast({ title: "Validation Error", description: "Note content cannot be empty.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
 
     const noteDataToSave = {
-      title: currentNote.title || null, // Store as null if empty
+      title: currentNote.title || null,
       content: currentNote.content!,
-      date: Timestamp.now(), // Always use current time for new/updated notes
+      date: Timestamp.now(), 
     };
 
     try {
@@ -72,7 +72,7 @@ export default function LoveNotesPage() {
         await addDoc(notesCollectionRef, noteDataToSave);
         toast({ title: "Success", description: "Love note saved!" });
       }
-      fetchNotes(); // Refresh list
+      fetchNotes(); 
       resetFormAndDialog();
     } catch (error: any) {
       console.error("Error saving note to Firestore:", error);
@@ -89,12 +89,13 @@ export default function LoveNotesPage() {
   };
 
   const openAddDialog = () => {
-    setCurrentNote({});
+    resetFormAndDialog();
     setIsEditing(false);
     setIsDialogOpen(true);
   };
 
   const openEditDialog = (note: LoveNote) => {
+    resetFormAndDialog();
     setCurrentNote(note);
     setIsEditing(true);
     setIsDialogOpen(true);
@@ -107,7 +108,7 @@ export default function LoveNotesPage() {
         const noteDoc = doc(db, "love_notes", id);
         await deleteDoc(noteDoc);
         toast({ title: "Success", description: "Love note deleted." });
-        fetchNotes(); // Refresh list
+        fetchNotes(); 
       } catch (error: any) {
         console.error("Error deleting note from Firestore:", error);
         toast({ title: "Database Error", description: error.message || "Could not delete note.", variant: "destructive" });
@@ -146,11 +147,11 @@ export default function LoveNotesPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-               <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" disabled={isLoading}>Cancel</Button>
+               <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" onClick={() => setIsLoading(false)} disabled={isLoading}>Cancel</Button>
             </DialogClose>
             <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Save Note
+                {isEditing ? "Save Changes" : "Save Note"}
             </Button>
           </DialogFooter>
         </DialogContent>
