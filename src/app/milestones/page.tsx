@@ -10,10 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import DecorativeBorder from "@/components/decorative-border";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, Timestamp, query, orderBy } from "firebase/firestore";
+import { format, parseISO } from 'date-fns';
 
 const milestoneIcons = [
   { value: "default", label: "General Sparkle" },
@@ -22,40 +25,47 @@ const milestoneIcons = [
   { value: "travel", label: "Our Adventures" },
 ];
 
+// Helper to convert Firestore Timestamp to ISO string date for date inputs
+const formatTimestampForInput = (timestamp: Timestamp | string | undefined): string => {
+  if (!timestamp) return new Date().toISOString().split('T')[0];
+  if (typeof timestamp === 'string') {
+    try {
+      return format(parseISO(timestamp), "yyyy-MM-dd");
+    } catch {
+      return new Date().toISOString().split('T')[0];
+    }
+  }
+  return format(timestamp.toDate(), "yyyy-MM-dd");
+};
+
 export default function MilestonesPage() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentMilestone, setCurrentMilestone] = useState<Partial<Milestone>>({});
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const storedMilestones = localStorage.getItem("milestones");
-    if (storedMilestones) {
-      try {
-        setMilestones(JSON.parse(storedMilestones).sort((a: Milestone, b: Milestone) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-      } catch (e) {
-        console.error("Error parsing milestones from localStorage", e);
-        setMilestones([]);
-      }
-    }
-  }, []);
+  const milestonesCollectionRef = collection(db, "milestones");
 
-  const saveMilestonesToLocalStorage = (updatedMilestones: Milestone[]): boolean => {
-     try {
-      localStorage.setItem("milestones", JSON.stringify(updatedMilestones));
-      return true;
+  const fetchMilestones = async () => {
+    setIsLoading(true);
+    try {
+      const q = query(milestonesCollectionRef, orderBy("date", "desc"));
+      const data = await getDocs(q);
+      const fetchedMilestones = data.docs.map((doc) => ({ ...doc.data(), id: doc.id } as Milestone));
+      setMilestones(fetchedMilestones);
     } catch (error: any) {
-      // Basic error handling, can be expanded
-      toast({
-        title: "Storage Error",
-        description: "Could not save milestones to local storage. Your browser storage might be full.",
-        variant: "destructive",
-      });
-      console.error("Error saving milestones to localStorage:", error);
-      return false;
+      console.error("Error fetching milestones from Firestore:", error);
+      toast({ title: "Error", description: "Could not fetch milestones.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchMilestones();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -66,34 +76,45 @@ export default function MilestonesPage() {
     setCurrentMilestone(prev => ({ ...prev, icon: value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!currentMilestone.title || !currentMilestone.date || !currentMilestone.description) {
       toast({ title: "Error", description: "Please fill in title, date, and description.", variant: "destructive" });
       return;
     }
+    setIsLoading(true);
 
-    let updatedMilestones;
-    if (isEditing && currentMilestone.id) {
-      updatedMilestones = milestones.map(m => m.id === currentMilestone.id ? { ...m, ...currentMilestone } as Milestone : m);
-    } else {
-      const newMilestone: Milestone = {
-        id: Date.now().toString(),
-        icon: currentMilestone.icon || "default",
-        ...currentMilestone,
-      } as Milestone;
-      updatedMilestones = [newMilestone, ...milestones];
+    const dateAsTimestamp = Timestamp.fromDate(parseISO(currentMilestone.date as string));
+    
+    const milestoneDataToSave = {
+      title: currentMilestone.title!,
+      date: dateAsTimestamp,
+      description: currentMilestone.description!,
+      icon: currentMilestone.icon || "default",
+    };
+
+    try {
+      if (isEditing && currentMilestone.id) {
+        const milestoneDoc = doc(db, "milestones", currentMilestone.id);
+        await updateDoc(milestoneDoc, milestoneDataToSave);
+        toast({ title: "Success", description: "Milestone updated!" });
+      } else {
+        await addDoc(milestonesCollectionRef, milestoneDataToSave);
+        toast({ title: "Success", description: "Milestone added!" });
+      }
+      fetchMilestones();
+      resetFormAndDialog();
+    } catch (error: any) {
+      console.error("Error saving milestone to Firestore:", error);
+      toast({ title: "Database Error", description: error.message || "Could not save milestone.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    updatedMilestones.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    if (saveMilestonesToLocalStorage(updatedMilestones)) {
-      setMilestones(updatedMilestones);
-      toast({ title: "Success", description: isEditing ? "Milestone updated!" : "Milestone added!" });
-      setIsDialogOpen(false);
-      setCurrentMilestone({});
-      setIsEditing(false);
-    }
-    // If saving fails, saveMilestonesToLocalStorage will show a toast
+  const resetFormAndDialog = () => {
+    setIsDialogOpen(false);
+    setCurrentMilestone({});
+    setIsEditing(false);
   };
 
   const openAddDialog = () => {
@@ -103,26 +124,37 @@ export default function MilestonesPage() {
   };
 
   const openEditDialog = (milestone: Milestone) => {
-    setCurrentMilestone(milestone);
+    setCurrentMilestone({
+        ...milestone,
+        date: formatTimestampForInput(milestone.date),
+    });
     setIsEditing(true);
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this milestone?")) {
-      const updatedMilestones = milestones.filter(m => m.id !== id);
-      setMilestones(updatedMilestones); // Update UI immediately
-
-      if (saveMilestonesToLocalStorage(updatedMilestones)) {
-        toast({ title: "Success", description: "Milestone deleted and changes saved." });
+  const handleDelete = async (id: string) => {
+    if (confirm("Are you sure you want to delete this milestone from the database?")) {
+      setIsLoading(true);
+      try {
+        const milestoneDoc = doc(db, "milestones", id);
+        await deleteDoc(milestoneDoc);
+        toast({ title: "Success", description: "Milestone deleted." });
+        fetchMilestones();
+      } catch (error: any) {
+        console.error("Error deleting milestone from Firestore:", error);
+        toast({ title: "Database Error", description: error.message || "Could not delete milestone.", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
       }
-      // If saveMilestonesToLocalStorage fails, it has already shown an error toast.
     }
   };
 
   return (
     <PageContainer title="Our Relationship Milestones">
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+          if(!isOpen) resetFormAndDialog();
+          setIsDialogOpen(isOpen);
+        }}>
         <DialogTrigger asChild>
           <Button onClick={openAddDialog} className="mb-6 bg-primary hover:bg-primary/90 text-primary-foreground font-body">
             <PlusCircle className="mr-2 h-5 w-5" /> Add New Milestone
@@ -141,7 +173,7 @@ export default function MilestonesPage() {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="date" className="text-right text-foreground/80">Date</Label>
-              <Input id="date" name="date" type="date" value={currentMilestone.date || ""} onChange={handleInputChange} className="col-span-3" />
+              <Input id="date" name="date" type="date" value={currentMilestone.date as string || ""} onChange={handleInputChange} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="description" className="text-right text-foreground/80">Description</Label>
@@ -163,14 +195,23 @@ export default function MilestonesPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10">Cancel</Button>
+              <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" disabled={isLoading}>Cancel</Button>
             </DialogClose>
-            <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body">Save Milestone</Button>
+            <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Save Milestone
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {isLoading && milestones.length === 0 && (
+         <div className="flex justify-center items-center h-40">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      )}
 
-      {milestones.length === 0 ? (
+      {!isLoading && milestones.length === 0 ? (
         <DecorativeBorder className="text-center">
             <p className="font-body text-lg text-foreground/70 p-8">No milestones recorded yet. Add the important moments that shaped your journey!</p>
         </DecorativeBorder>

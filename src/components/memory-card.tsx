@@ -1,16 +1,25 @@
 
 import type { Memory } from "@/lib/types";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import { CalendarDays, Edit3, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { format, parseISO } from "date-fns";
+import type { Timestamp } from "firebase/firestore";
 
 interface MemoryCardProps {
   memory: Memory;
   onEdit: (memory: Memory) => void;
   onDelete: (id: string) => void;
 }
+
+// Helper to format date, whether it's a Firestore Timestamp or an ISO string
+const formatDate = (date: string | Timestamp): string => {
+  if (typeof date === 'string') {
+    return format(parseISO(date), "MMMM d, yyyy");
+  }
+  return format(date.toDate(), "MMMM d, yyyy");
+};
 
 export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
   return (
@@ -23,7 +32,7 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
             layout="fill"
             objectFit="cover"
             data-ai-hint={memory["data-ai-hint"] || "couple memory"}
-            unoptimized={memory.photoUrl.startsWith('data:image')} /* Allow data URIs */
+            unoptimized={memory.photoUrl.startsWith('data:image')}
           />
         </div>
       )}
@@ -31,7 +40,7 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
         <CardTitle className="font-headline text-2xl text-primary">{memory.title}</CardTitle>
         <div className="flex items-center text-sm text-foreground/70 font-body">
           <CalendarDays className="mr-2 h-4 w-4 text-accent" />
-          {format(parseISO(memory.date), "MMMM d, yyyy")}
+          {formatDate(memory.date)}
         </div>
       </CardHeader>
       <CardContent>

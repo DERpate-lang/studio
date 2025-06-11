@@ -9,82 +9,83 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import DecorativeBorder from "@/components/decorative-border";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, Timestamp, query, orderBy } from "firebase/firestore";
 
 export default function LoveNotesPage() {
   const [notes, setNotes] = useState<LoveNote[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentNote, setCurrentNote] = useState<Partial<LoveNote>>({});
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const storedNotes = localStorage.getItem("loveNotes");
-    if (storedNotes) {
-      try {
-        setNotes(JSON.parse(storedNotes).sort((a: LoveNote, b: LoveNote) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-      } catch (e) {
-        console.error("Error parsing notes from localStorage", e);
-        setNotes([]);
-      }
-    }
-  }, []);
+  const notesCollectionRef = collection(db, "love_notes");
 
-  const saveNotesToLocalStorage = (updatedNotes: LoveNote[]): boolean => {
+  const fetchNotes = async () => {
+    setIsLoading(true);
     try {
-      localStorage.setItem("loveNotes", JSON.stringify(updatedNotes));
-      return true;
+      const q = query(notesCollectionRef, orderBy("date", "desc"));
+      const data = await getDocs(q);
+      const fetchedNotes = data.docs.map((doc) => ({ ...doc.data(), id: doc.id } as LoveNote));
+      setNotes(fetchedNotes);
     } catch (error: any) {
-      // Basic error handling, can be expanded
-      toast({
-        title: "Storage Error",
-        description: "Could not save notes to local storage. Your browser storage might be full.",
-        variant: "destructive",
-      });
-      console.error("Error saving notes to localStorage:", error);
-      return false;
+      console.error("Error fetching notes from Firestore:", error);
+      toast({ title: "Error", description: "Could not fetch notes.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchNotes();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setCurrentNote(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!currentNote.content) {
       toast({ title: "Error", description: "Note content cannot be empty.", variant: "destructive" });
       return;
     }
+    setIsLoading(true);
 
-    let updatedNotes;
-    const now = new Date().toISOString();
+    const noteDataToSave = {
+      title: currentNote.title || null, // Store as null if empty
+      content: currentNote.content!,
+      date: Timestamp.now(), // Always use current time for new/updated notes
+    };
 
-    if (isEditing && currentNote.id) {
-      updatedNotes = notes.map(n => n.id === currentNote.id ? { ...n, ...currentNote, date: now } as LoveNote : n);
-    } else {
-      const newNote: LoveNote = {
-        id: Date.now().toString(),
-        date: now,
-        title: currentNote.title || undefined,
-        content: currentNote.content!,
-      };
-      updatedNotes = [newNote, ...notes];
+    try {
+      if (isEditing && currentNote.id) {
+        const noteDoc = doc(db, "love_notes", currentNote.id);
+        await updateDoc(noteDoc, noteDataToSave);
+        toast({ title: "Success", description: "Love note updated!" });
+      } else {
+        await addDoc(notesCollectionRef, noteDataToSave);
+        toast({ title: "Success", description: "Love note saved!" });
+      }
+      fetchNotes(); // Refresh list
+      resetFormAndDialog();
+    } catch (error: any) {
+      console.error("Error saving note to Firestore:", error);
+      toast({ title: "Database Error", description: error.message || "Could not save note.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
-
-    updatedNotes.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    if(saveNotesToLocalStorage(updatedNotes)){
-      setNotes(updatedNotes);
-      toast({ title: "Success", description: isEditing ? "Love note updated!" : "Love note saved!" });
-      setIsDialogOpen(false);
-      setCurrentNote({});
-      setIsEditing(false);
-    }
-    // If saving fails, saveNotesToLocalStorage will show a toast
+  };
+  
+  const resetFormAndDialog = () => {
+    setIsDialogOpen(false);
+    setCurrentNote({});
+    setIsEditing(false);
   };
 
   const openAddDialog = () => {
@@ -99,21 +100,29 @@ export default function LoveNotesPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-     if (confirm("Are you sure you want to delete this note?")) {
-      const updatedNotes = notes.filter(n => n.id !== id);
-      setNotes(updatedNotes); // Update UI immediately
-
-      if(saveNotesToLocalStorage(updatedNotes)){
-        toast({ title: "Success", description: "Love note deleted and changes saved." });
+  const handleDelete = async (id: string) => {
+     if (confirm("Are you sure you want to delete this note from the database?")) {
+      setIsLoading(true);
+      try {
+        const noteDoc = doc(db, "love_notes", id);
+        await deleteDoc(noteDoc);
+        toast({ title: "Success", description: "Love note deleted." });
+        fetchNotes(); // Refresh list
+      } catch (error: any) {
+        console.error("Error deleting note from Firestore:", error);
+        toast({ title: "Database Error", description: error.message || "Could not delete note.", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
       }
-      // If saveNotesToLocalStorage fails, it has already shown an error toast.
     }
   };
 
   return (
     <PageContainer title="Our Love Notes">
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+        if (!isOpen) resetFormAndDialog();
+        setIsDialogOpen(isOpen);
+      }}>
         <DialogTrigger asChild>
           <Button onClick={openAddDialog} className="mb-6 bg-primary hover:bg-primary/90 text-primary-foreground font-body">
             <PlusCircle className="mr-2 h-5 w-5" /> Write New Note
@@ -137,14 +146,23 @@ export default function LoveNotesPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-               <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10">Cancel</Button>
+               <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" disabled={isLoading}>Cancel</Button>
             </DialogClose>
-            <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body">Save Note</Button>
+            <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Save Note
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {notes.length === 0 ? (
+      {isLoading && notes.length === 0 && (
+         <div className="flex justify-center items-center h-40">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      )}
+
+      {!isLoading && notes.length === 0 ? (
         <DecorativeBorder className="text-center">
             <p className="font-body text-lg text-foreground/70 p-8">No love notes yet. Write your first message to your beloved!</p>
         </DecorativeBorder>

@@ -1,14 +1,24 @@
+
 import type { LoveNote } from "@/lib/types";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit3, Trash2, CalendarHeart } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import type { Timestamp } from "firebase/firestore";
 
 interface LoveNoteCardProps {
   note: LoveNote;
   onEdit: (note: LoveNote) => void;
   onDelete: (id: string) => void;
 }
+
+// Helper to format date, whether it's a Firestore Timestamp or an ISO string
+const formatDate = (date: string | Timestamp): string => {
+  if (typeof date === 'string') {
+    return format(parseISO(date), "MMMM d, yyyy 'at' h:mm a");
+  }
+  return format(date.toDate(), "MMMM d, yyyy 'at' h:mm a");
+};
 
 export function LoveNoteCard({ note, onEdit, onDelete }: LoveNoteCardProps) {
   return (
@@ -17,7 +27,7 @@ export function LoveNoteCard({ note, onEdit, onDelete }: LoveNoteCardProps) {
         {note.title && <CardTitle className="font-headline text-2xl text-primary">{note.title}</CardTitle>}
         <div className="flex items-center text-sm text-foreground/70 font-body">
           <CalendarHeart className="mr-2 h-4 w-4 text-accent" />
-          {format(parseISO(note.date), "MMMM d, yyyy 'at' h:mm a")}
+          {formatDate(note.date)}
         </div>
       </CardHeader>
       <CardContent className="flex-grow">

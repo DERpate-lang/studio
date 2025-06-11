@@ -1,8 +1,9 @@
 import type { Milestone } from "@/lib/types";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "./ui/button";
-import { CalendarDays, Edit3, Trash2, Zap, Gift, MapPin, Sparkles } from "lucide-react"; // Example icons
+import { CalendarDays, Edit3, Trash2, Zap, Gift, MapPin, Sparkles } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import type { Timestamp } from "firebase/firestore";
 
 interface MilestoneItemProps {
   milestone: Milestone;
@@ -17,6 +18,14 @@ const iconMap: { [key: string]: React.ElementType } = {
   travel: MapPin,
 };
 
+// Helper to format date, whether it's a Firestore Timestamp or an ISO string
+const formatDate = (date: string | Timestamp): string => {
+  if (typeof date === 'string') {
+    return format(parseISO(date), "MMMM d, yyyy");
+  }
+  return format(date.toDate(), "MMMM d, yyyy");
+};
+
 export function MilestoneItem({ milestone, onEdit, onDelete }: MilestoneItemProps) {
   const IconComponent = milestone.icon && iconMap[milestone.icon] ? iconMap[milestone.icon] : iconMap.default;
 
@@ -29,7 +38,7 @@ export function MilestoneItem({ milestone, onEdit, onDelete }: MilestoneItemProp
             <CardTitle className="font-headline text-2xl text-primary">{milestone.title}</CardTitle>
             <div className="flex items-center text-sm text-foreground/70 font-body">
               <CalendarDays className="mr-2 h-4 w-4 text-accent" />
-              {format(parseISO(milestone.date), "MMMM d, yyyy")}
+              {formatDate(milestone.date)}
             </div>
           </div>
         </div>
