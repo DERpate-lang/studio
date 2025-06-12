@@ -128,8 +128,8 @@ export default function MemoriesPage() {
         title: currentMemory.title!,
         date: dateAsTimestamp,
         description: currentMemory.description!,
-        photoUrl: currentMemory.photoUrl || null,
-        "data-ai-hint": currentMemory.photoUrl ? (currentMemory["data-ai-hint"] || "memory image") : null,
+        photoUrl: currentMemory.photoUrl || undefined,
+        "data-ai-hint": currentMemory.photoUrl ? (currentMemory["data-ai-hint"] || "memory image") : undefined,
       };
 
       if (isEditing && currentMemory.id) {
@@ -286,5 +286,4 @@ export default function MemoriesPage() {
     </PageContainer>
   );
 }
-
     
