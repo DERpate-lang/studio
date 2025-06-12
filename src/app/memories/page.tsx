@@ -187,7 +187,8 @@ export default function MemoriesPage() {
       await deleteDoc(memoryDoc);
       toast({ title: "Success", description: "Memory deleted." });
       fetchMemories(); 
-    } catch (error: any) {
+    } catch (error: any)
+      {
       console.error("Error deleting memory from Firestore:", error);
       toast({ title: "Database Error", description: error.message || "Could not delete memory.", variant: "destructive" });
     } finally {
