@@ -1,3 +1,4 @@
+
 // src/ai/flows/love-letter-generator.ts
 'use server';
 
@@ -36,6 +37,7 @@ export async function loveLetterGenerator(input: LoveLetterGeneratorInput): Prom
 
 const loveLetterGeneratorPrompt = ai.definePrompt({
   name: 'loveLetterGeneratorPrompt',
+  model: 'googleai/gemini-2.0-flash', // Explicitly set the model here
   input: {schema: LoveLetterGeneratorInputSchema},
   output: {schema: LoveLetterGeneratorOutputSchema},
   prompt: `You are a professional love letter writer. Use the relationship history and love notes to create a personalized and heartfelt love letter suggestion for the given occasion.
@@ -46,7 +48,7 @@ Love Notes: {{{loveNotes}}}
 
 Occasion: {{{occasion}}}
 
-Love Letter Suggestion:`, // outputDescription is not supported for prompts
+Love Letter Suggestion:`,
 });
 
 const loveLetterGeneratorFlow = ai.defineFlow(
