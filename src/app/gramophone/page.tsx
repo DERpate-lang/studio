@@ -14,10 +14,10 @@ export default function GramophonePage() {
             <p className="font-body text-foreground/80 text-center">
                 Click the vinyl to start the music. Double-click to pause.
             </p>
-            <GramophonePlayer audioSrc="/music/lofi.mp3" vinylImageSrc={vinylImage} />
+            <GramophonePlayer audioSrc="/music/lofi.m4a" vinylImageSrc={vinylImage} />
             <div className="mt-6 p-4 bg-muted/50 rounded-md text-sm font-body text-muted-foreground">
                 <p className="font-semibold text-primary">Important Audio Note:</p>
-                <p>For the player to work, please ensure you have a file named <code>lofi.mp3</code> located in your <code>public/music/</code> directory.</p>
+                <p>For the player to work, please ensure you have a file named <code>lofi.m4a</code> located in your <code>public/music/</code> directory.</p>
                 <p>If the error 'Could not load audio' persists, this file is likely missing or misplaced.</p>
             </div>
         </div>
