@@ -36,6 +36,7 @@ export default function GalleryPage() {
 
   const fetchPhotos = async () => {
     setIsFetching(true);
+    setPhotos([]); // Clear existing photos while fetching
     try {
       const { data, error } = await supabase
         .from("gallery_photos")
@@ -52,10 +53,10 @@ export default function GalleryPage() {
       console.error("Error fetching photos from Supabase DB:", error);
       toast({
         title: "Error Fetching Photos",
-        description: error.message || "Could not load photos. Check Supabase setup and RLS policies.",
+        description: error.message || "Could not load photos. Check Supabase 'gallery_photos' table existence, RLS policies, and network.",
         variant: "destructive",
       });
-      setPhotos([]); // Clear photos on error
+      setPhotos([]); 
     } finally {
       setIsFetching(false);
     }
@@ -82,7 +83,7 @@ export default function GalleryPage() {
       const uploadPromises = selectedFiles.map(async (file) => {
         const fileExt = file.name.split('.').pop();
         const fileName = `${uuidv4()}.${fileExt}`;
-        const filePath = fileName; 
+        const filePath = fileName; // Store at the root of the bucket with a unique name
 
         try {
           const { error: uploadError } = await supabase.storage
@@ -91,10 +92,15 @@ export default function GalleryPage() {
 
           if (uploadError) {
             console.error(`Supabase Storage upload error for ${file.name}:`, uploadError);
+            // Attempt to get more details from the error object if it's not a standard error
+            if (typeof uploadError === 'object' && uploadError !== null) {
+                console.error('Detailed Supabase Storage upload error object:', JSON.stringify(uploadError, Object.getOwnPropertyNames(uploadError)));
+            }
             toast({
                 title: `Storage Upload Failed: ${file.name}`,
-                description: `Error: ${uploadError.message}. Check bucket/RLS policies for storage.objects.`,
+                description: `Error: ${uploadError.message || 'Upload failed with an unspecified error.'} Please check that the 'gallery-photos' bucket exists, is public, and that RLS policies on 'storage.objects' allow INSERT operations for this bucket. Also verify your Supabase URL/key environment variables.`,
                 variant: "destructive",
+                duration: 9000, 
             });
             return null;
           }
@@ -107,7 +113,7 @@ export default function GalleryPage() {
               console.error(`Failed to get public URL for ${filePath}`);
               toast({
                   title: `URL Retrieval Error: ${file.name}`,
-                  description: "Could not get public URL after upload.",
+                  description: "Could not get public URL after upload. Check bucket RLS policies for SELECT on 'storage.objects'.",
                   variant: "destructive",
               });
               return null;
@@ -121,7 +127,7 @@ export default function GalleryPage() {
           };
         } catch (innerError: any) { 
           console.error(`Unexpected error processing ${file.name}:`, innerError);
-          toast({ title: `Processing Error: ${file.name}`, description: innerError.message || "An unexpected error occurred.", variant: "destructive" });
+          toast({ title: `Processing Error: ${file.name}`, description: innerError.message || "An unexpected error occurred during file processing.", variant: "destructive" });
           return null;
         }
       });
@@ -130,8 +136,10 @@ export default function GalleryPage() {
       successfullyUploadedPhotosData = results.filter(data => data !== null) as { url: string; caption: string; data_ai_hint: string, file_path: string }[];
 
       if (successfullyUploadedPhotosData.length === 0 && selectedFiles.length > 0) {
-        toast({ title: "No Photos Uploaded", description: "None of the selected files could be processed and uploaded.", variant: "default" });
-        // setIsLoading(false) will be handled by finally block
+        // This toast will show if all uploads failed but there were files selected.
+        // Specific errors for each file would have been shown already.
+        toast({ title: "Upload Incomplete", description: "None of the selected files could be successfully uploaded. See previous errors for details.", variant: "default" });
+        setIsLoading(false); // Reset loading state here as we return early
         return;
       }
 
@@ -152,20 +160,18 @@ export default function GalleryPage() {
           console.error("Supabase DB insert error:", dbError);
           toast({
               title: "Database Save Failed",
-              description: `Could not save photo metadata. Error: ${dbError.message}. Check table RLS policies.`,
+              description: `Could not save photo metadata. Error: ${dbError.message}. Check 'gallery_photos' table RLS policies for INSERT.`,
               variant: "destructive",
           });
-          // Note: Successfully uploaded files to storage are not deleted here if DB insert fails.
-          return; 
+          // Note: Successfully uploaded files to storage are not deleted here if DB insert fails. Consider cleanup logic if this is critical.
+          return; // Return here, finally block will handle isLoading
         }
 
         if (insertedPhotos) {
-          // No need to call fetchPhotos() here if we manually update state
-          // This avoids an extra fetch and potential flicker
           setPhotos(prevPhotos => [...(insertedPhotos as Photo[]), ...prevPhotos].sort((a,b) => new Date(b.date_added).getTime() - new Date(a.date_added).getTime()));
           toast({ title: "Success", description: `${insertedPhotos.length} photo(s) uploaded and saved!` });
-          setIsDialogOpen(false); // Close dialog on success
-          setSelectedFiles([]); // Reset file selections
+          setIsDialogOpen(false); 
+          setSelectedFiles([]); 
           setNewPhotoCaption("");
           if (fileInputRef.current) {
             fileInputRef.current.value = "";
@@ -181,8 +187,8 @@ export default function GalleryPage() {
       });
     } finally {
       setIsLoading(false);
-      // Only reset form fields if dialog is not closed due to success
-      if (isDialogOpen) { 
+      // Reset form fields only if dialog is still open (meaning an error occurred before success closed it)
+      if (isDialogOpen && successfullyUploadedPhotosData.length === 0) { 
         setSelectedFiles([]);
         setNewPhotoCaption("");
         if (fileInputRef.current) {
@@ -210,9 +216,10 @@ export default function GalleryPage() {
         console.error("Error deleting photo from Supabase Storage:", storageError);
         toast({
           title: "Storage Deletion Warning",
-          description: `Could not delete file from storage: ${storageError.message}. Attempting to remove from database.`,
+          description: `Could not delete file from storage: ${storageError.message}. Check 'storage.objects' RLS for DELETE. Attempting to remove from database.`,
           variant: "default" 
         });
+        // Do not return; proceed to attempt DB deletion
       }
 
       const { error: dbError } = await supabase
@@ -221,7 +228,7 @@ export default function GalleryPage() {
         .match({ id: photo.id });
 
       if (dbError) {
-        throw dbError; // This will be caught by the outer catch block
+        throw dbError; 
       }
 
       setPhotos(prevPhotos => prevPhotos.filter(p => p.id !== photo.id));
@@ -230,7 +237,7 @@ export default function GalleryPage() {
       console.error("Error deleting photo:", error);
       toast({
         title: "Deletion Error",
-        description: error.message || "Could not delete photo. Check RLS policies.",
+        description: error.message || "Could not delete photo. Check RLS policies for 'gallery_photos' (DELETE) and 'storage.objects' (DELETE).",
         variant: "destructive",
       });
     } finally {
@@ -242,7 +249,7 @@ export default function GalleryPage() {
     <PageContainer title="Our Photo Gallery">
       <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
         setIsDialogOpen(isOpen);
-        if (!isOpen) {
+        if (!isOpen) { // Reset form if dialog is closed for any reason
           setSelectedFiles([]);
           setNewPhotoCaption("");
           if (fileInputRef.current) {
@@ -251,7 +258,7 @@ export default function GalleryPage() {
         }
       }}>
         <DialogTrigger asChild>
-          <Button className="mb-6 bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isFetching}>
+          <Button className="mb-6 bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isFetching || isLoading}>
             {isClient && <PlusCircle className="mr-2 h-5 w-5" />}
             Add New Photo(s)
           </Button>
@@ -263,11 +270,11 @@ export default function GalleryPage() {
           <div className="grid gap-4 py-4 font-body">
             <div className="space-y-1">
               <Label htmlFor="photoFile" className="text-foreground/80">Photo File(s)</Label>
-              <Input id="photoFile" type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} multiple />
+              <Input id="photoFile" type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} multiple disabled={isLoading}/>
             </div>
             <div className="space-y-1">
               <Label htmlFor="caption" className="text-foreground/80">Caption (Optional, applies to all)</Label>
-              <Input id="caption" value={newPhotoCaption} onChange={(e) => setNewPhotoCaption(e.target.value)} />
+              <Input id="caption" value={newPhotoCaption} onChange={(e) => setNewPhotoCaption(e.target.value)} disabled={isLoading}/>
             </div>
             {selectedFiles.length > 0 && (
               <div className="text-sm text-muted-foreground space-y-1">
@@ -289,7 +296,7 @@ export default function GalleryPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" onClick={() => { if(isLoading) setIsLoading(false); }} disabled={isLoading && !isFetching}>Cancel</Button>
+              <Button variant="outline" className="font-body border-primary text-primary hover:bg-primary/10" onClick={() => { if(isLoading) setIsLoading(false); }} disabled={isLoading}>Cancel</Button>
             </DialogClose>
             <Button onClick={handleAddPhoto} className="bg-primary hover:bg-primary/90 text-primary-foreground font-body" disabled={isLoading || isFetching || selectedFiles.length === 0}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -299,49 +306,49 @@ export default function GalleryPage() {
         </DialogContent>
       </Dialog>
 
-      {isFetching && photos.length === 0 && (
+      {isFetching && ( // Show loader only when fetching and photos array is still potentially empty
         <div className="flex justify-center items-center h-40">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       )}
 
-      {!isFetching && photos.length === 0 ? (
+      {!isFetching && photos.length === 0 && ( // Show empty state only after fetching is done and photos are confirmed empty
          <DecorativeBorder className="text-center">
             <p className="font-body text-lg text-foreground/70 p-8">Your gallery is empty. Add some photos to start your visual journey!</p>
         </DecorativeBorder>
-      ) : (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {photos.map((photo) => (
-          <Card key={photo.id} className="group relative overflow-hidden rounded-lg shadow-lg border border-primary/10 aspect-square transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-accent">
-            <Image
-              src={photo.url}
-              alt={photo.caption || "Gallery image"}
-              fill
-              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              style={{ objectFit: "cover" }}
-              className="transition-transform duration-500 group-hover:scale-110"
-              data-ai-hint={photo['data_ai_hint'] || "gallery image"}
-            />
-            {photo.caption && (
-              <div className="absolute inset-x-0 bottom-0 bg-black/50 p-2 text-center">
-                <p className="text-sm text-white font-body truncate">{photo.caption}</p>
-              </div>
-            )}
-            <Button
-              variant="destructive"
-              size="icon"
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-8 w-8"
-              onClick={() => handleDeletePhoto(photo)}
-              disabled={isLoading || isFetching}
-            >
-              {isClient && <Trash2 className="h-4 w-4" />}
-            </Button>
-          </Card>
-        ))}
-      </div>
+      )}
+      
+      {photos.length > 0 && ( // Only render grid if photos exist (regardless of fetching state, to prevent flicker if photos are already loaded)
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {photos.map((photo) => (
+            <Card key={photo.id} className="group relative overflow-hidden rounded-lg shadow-lg border border-primary/10 aspect-square transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-accent">
+                <Image
+                src={photo.url}
+                alt={photo.caption || "Gallery image"}
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                style={{ objectFit: "cover" }}
+                className="transition-transform duration-500 group-hover:scale-110"
+                data-ai-hint={photo['data_ai_hint'] || "gallery image"}
+                />
+                {photo.caption && (
+                <div className="absolute inset-x-0 bottom-0 bg-black/50 p-2 text-center">
+                    <p className="text-sm text-white font-body truncate">{photo.caption}</p>
+                </div>
+                )}
+                <Button
+                variant="destructive"
+                size="icon"
+                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-8 w-8"
+                onClick={() => handleDeletePhoto(photo)}
+                disabled={isLoading || isFetching} 
+                >
+                {isClient && <Trash2 className="h-4 w-4" />}
+                </Button>
+            </Card>
+            ))}
+        </div>
       )}
     </PageContainer>
   );
 }
-
-    
