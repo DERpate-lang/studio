@@ -1,0 +1,16 @@
+# netlify.toml
+# This file provides configuration for deploying your Next.js site on Netlify.
+
+[build]
+  # Your build command, as defined in package.json ("next build")
+  command = "npm run build"
+  
+  # The directory Netlify will publish. For standard Next.js sites (SSR/ISR),
+  # this is ".next". Netlify's Next.js plugin handles this directory structure.
+  publish = ".next"
+
+# The Essential Next.js Build Plugin is usually automatically detected and
+# applied by Netlify for Next.js projects. Explicitly adding it here ensures
+# it's used and provides a place for future plugin-specific configurations.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
