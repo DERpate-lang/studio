@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -15,6 +16,12 @@ const nextConfig: NextConfig = {
         hostname: 'placehold.co',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ktkbkkvkqirkarnobefz.supabase.co', // Your Supabase project hostname
+        port: '',
+        pathname: '/storage/v1/object/public/**', // Allow access to public storage objects
       },
     ],
   },
