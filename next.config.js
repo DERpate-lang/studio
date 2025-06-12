@@ -18,6 +18,12 @@ const nextConfig = {
         port: '',
         pathname: '/storage/v1/object/public/**', // Allow access to public storage objects
       },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };
