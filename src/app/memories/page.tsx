@@ -56,6 +56,7 @@ export default function MemoriesPage() {
         const docData = doc.data();
         return {
           ...docData,
+          photoUrl: docData.photoUrl ?? undefined,
           id: doc.id,
           date: docData.date // Keep as Firestore Timestamp initially
         } as Memory;
