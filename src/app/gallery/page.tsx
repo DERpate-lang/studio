@@ -343,37 +343,43 @@ export default function GalleryPage() {
 
       {photos.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {photos.map((photo) => (
-            <Card key={photo.id} className="group relative overflow-hidden rounded-lg shadow-lg border border-primary/10 aspect-square transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-accent">
-                {isClient && (
-                  <Image
-                  src={photo.url}
-                  alt={photo.caption || "Gallery image"}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                  style={{ objectFit: "cover" }}
-                  className="transition-transform duration-500 group-hover:scale-110"
-                  data-ai-hint={photo['data_ai_hint'] || "gallery image"}
-                  priority={photos.indexOf(photo) < 4}
-                  unoptimized={true} 
-                  />
-                )}
-                {photo.caption && (
-                <div className="absolute inset-x-0 bottom-0 bg-black/50 p-2 text-center">
-                    <p className="text-sm text-white font-body truncate">{photo.caption}</p>
-                </div>
-                )}
-                <Button
-                variant="destructive"
-                size="icon"
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-8 w-8"
-                onClick={() => handleDeletePhoto(photo)}
-                disabled={isLoading || isFetching}
-                >
-                {isClient && <Trash2 className="h-4 w-4" />}
-                </Button>
-            </Card>
-            ))}
+            {photos.map((photo) => {
+              // Log the URL to help debug image loading issues
+              if (isClient) { // Only log on the client-side
+                console.log("Attempting to render gallery image with URL:", photo.url);
+              }
+              return (
+                <Card key={photo.id} className="group relative overflow-hidden rounded-lg shadow-lg border border-primary/10 aspect-square transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-accent">
+                    {isClient && (
+                      <Image
+                      src={photo.url}
+                      alt={photo.caption || "Gallery image"}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      style={{ objectFit: "cover" }}
+                      className="transition-transform duration-500 group-hover:scale-110"
+                      data-ai-hint={photo['data_ai_hint'] || "gallery image"}
+                      priority={photos.indexOf(photo) < 4}
+                      unoptimized={true} 
+                      />
+                    )}
+                    {photo.caption && (
+                    <div className="absolute inset-x-0 bottom-0 bg-black/50 p-2 text-center">
+                        <p className="text-sm text-white font-body truncate">{photo.caption}</p>
+                    </div>
+                    )}
+                    <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-8 w-8"
+                    onClick={() => handleDeletePhoto(photo)}
+                    disabled={isLoading || isFetching}
+                    >
+                    {isClient && <Trash2 className="h-4 w-4" />}
+                    </Button>
+                </Card>
+              );
+            })}
         </div>
       )}
     </PageContainer>
