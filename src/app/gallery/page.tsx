@@ -42,7 +42,7 @@ export default function GalleryPage() {
 
   const fetchPhotos = async () => {
     setIsFetching(true);
-    setPhotos([]); // Clear existing photos while fetching
+    setPhotos([]); 
     try {
       const { data, error } = await supabase
         .from("gallery_photos")
@@ -63,7 +63,7 @@ export default function GalleryPage() {
         variant: "destructive",
         duration: 9000,
       });
-      setPhotos([]); // Ensure photos remain empty on error
+      setPhotos([]); 
     } finally {
       setIsFetching(false);
     }
@@ -90,7 +90,7 @@ export default function GalleryPage() {
       const uploadPromises = selectedFiles.map(async (file) => {
         const fileExt = file.name.split('.').pop();
         const fileName = `${uuidv4()}.${fileExt}`;
-        const filePath = fileName; // Store at the root of the bucket
+        const filePath = fileName; 
 
         try {
           const { error: uploadError } = await supabase.storage
@@ -98,31 +98,29 @@ export default function GalleryPage() {
             .upload(filePath, file, {
               cacheControl: '3600',
               upsert: false,
-              contentType: file.type, // Explicitly set content type
+              contentType: file.type, 
             });
 
           if (uploadError) {
             console.error(`Supabase Storage upload error for ${file.name}:`, uploadError);
-            // Attempt to get more details from the error object if it's not a standard error
             if (typeof uploadError === 'object' && uploadError !== null) {
                 console.error('Detailed Supabase Storage upload error object:', JSON.stringify(uploadError, Object.getOwnPropertyNames(uploadError)));
             }
             
             let descriptionMessage = `Error: ${uploadError.message || "Upload failed with an unspecified error."}`;
-            // Check if it's the specific RLS violation error
             if (uploadError.message && uploadError.message.includes("violates row-level security policy")) {
-                descriptionMessage = "CRITICAL: Upload REJECTED by Supabase Storage due to Row Level Security. \n1. Go to Supabase Dashboard > Database > Policies. \n2. Select 'storage' schema and 'objects' table. \n3. Ensure an INSERT policy exists for bucket 'gallery-photos' allowing uploads (e.g., target roles: anon/auth, USING/WITH CHECK: bucket_id = 'gallery-photos'). \n4. This '403 Forbidden - violates RLS policy' is a Supabase configuration issue, not app code.";
+                descriptionMessage = "CRITICAL: Upload REJECTED by Supabase Storage due to Row Level Security. \n1. Go to Supabase Dashboard > Storage > Select 'gallery-photos' bucket > Policies. \n2. Ensure an INSERT policy exists allowing uploads (e.g., target roles: anon/auth). \n3. This '403 Forbidden - violates RLS policy' is a Supabase Storage Bucket Policy configuration issue, not app code.";
             } else if (isObjectEmpty(uploadError) && !uploadError.message) {
-                 descriptionMessage = "CRITICAL: Upload failed with an EMPTY error object. This ALMOST ALWAYS means a Supabase RLS or bucket configuration issue. \n1. VERIFY RLS for 'storage.objects': Ensure an INSERT policy exists for bucket 'gallery-photos' (target roles: anon/auth, USING/WITH CHECK: bucket_id = 'gallery-photos'). \n2. Check 'gallery-photos' bucket exists & is public. \n3. Check Supabase URL/Key env vars: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY.";
+                 descriptionMessage = "UPLOAD BLOCKED: Supabase returned an empty error. This means a critical configuration issue for the 'gallery-photos' bucket. \nTROUBLESHOOT: \n1. STORAGE BUCKET POLICIES: Go to Supabase Dashboard > Storage > Click on 'gallery-photos' bucket > 'Policies' tab. Ensure an INSERT policy exists allowing the 'anon' role (or 'authenticated' if users log in) to upload. \n2. BUCKET SETTINGS: Confirm 'gallery-photos' bucket exists and IS PUBLIC. \n3. ENV VARS: Double-check NEXT_PUBLIC_SUPABASE_URL & ANON_KEY. \n4. NETWORK TAB: Open browser developer tools (F12), go to Network tab, try uploading, and inspect the failed 'upload' request for status code/response details.";
             } else {
-                descriptionMessage += " Please check that the 'gallery-photos' bucket exists, is public, and that RLS policies on 'storage.objects' allow INSERT operations for this bucket. Also verify your Supabase URL/key environment variables.";
+                descriptionMessage += " Please check that the 'gallery-photos' bucket exists, is public, and that its Storage Policies allow INSERT operations. Also verify your Supabase URL/key environment variables.";
             }
 
             toast({
                 title: `Storage Upload Failed: ${file.name}`,
                 description: descriptionMessage,
                 variant: "destructive",
-                duration: 15000, // Longer duration for critical messages
+                duration: 15000, 
             });
             return null;
           }
@@ -135,7 +133,7 @@ export default function GalleryPage() {
               console.error(`Failed to get public URL for ${filePath}`);
               toast({
                   title: `URL Retrieval Error: ${file.name}`,
-                  description: "Could not get public URL after upload. Check bucket RLS policies for SELECT on 'storage.objects' for 'gallery-photos' bucket, and ensure bucket is public.",
+                  description: "Could not get public URL after upload. Check bucket's Storage Policies allow SELECT on 'gallery-photos' bucket, and ensure bucket is public.",
                   variant: "destructive",
                   duration: 9000,
               });
@@ -160,7 +158,6 @@ export default function GalleryPage() {
 
       if (successfullyUploadedPhotosData.length === 0 && selectedFiles.length > 0) {
         toast({ title: "Upload Incomplete", description: "None of the selected files could be successfully uploaded. See previous errors for details.", variant: "default", duration: 7000 });
-        // No early return here, finally block handles isLoading
       }
 
       if (successfullyUploadedPhotosData.length > 0) {
@@ -169,7 +166,6 @@ export default function GalleryPage() {
           caption: pData.caption,
           data_ai_hint: pData.data_ai_hint,
           file_path: pData.file_path,
-          // date_added will be set by Supabase default value
         }));
 
         const { data: insertedPhotos, error: dbError } = await supabase
@@ -185,12 +181,10 @@ export default function GalleryPage() {
               variant: "destructive",
               duration: 9000,
           });
-          // Note: Successfully uploaded files to storage are not deleted here if DB insert fails. Consider cleanup logic if this is critical.
-          return; // Return here, finally block will handle isLoading for this specific path
+          return; 
         }
 
         if (insertedPhotos) {
-          // Update local state directly for better UX instead of re-fetching
           setPhotos(prevPhotos => [...(insertedPhotos as Photo[]), ...prevPhotos].sort((a,b) => new Date(b.date_added).getTime() - new Date(a.date_added).getTime()));
           toast({ title: "Success", description: `${insertedPhotos.length} photo(s) uploaded and saved!`, duration: 5000 });
           setIsDialogOpen(false);
@@ -211,8 +205,6 @@ export default function GalleryPage() {
       });
     } finally {
       setIsLoading(false);
-      // Reset form fields if dialog is still open (meaning an error occurred before success closed it,
-      // or no photos were successfully uploaded)
       if (isDialogOpen && successfullyUploadedPhotosData.length === 0) {
         setSelectedFiles([]);
         setNewPhotoCaption("");
@@ -241,11 +233,10 @@ export default function GalleryPage() {
         console.error("Error deleting photo from Supabase Storage:", storageError);
         toast({
           title: "Storage Deletion Warning",
-          description: `Could not delete file from storage: ${storageError.message}. Check 'storage.objects' RLS for DELETE on 'gallery-photos' bucket. Attempting to remove from database.`,
-          variant: "default", // Changed to default, as it's a warning if DB part succeeds
+          description: `Could not delete file from storage: ${storageError.message}. Check Storage Bucket Policies for DELETE on 'gallery-photos' bucket. Attempting to remove from database.`,
+          variant: "default", 
           duration: 9000,
         });
-        // Do not return here if storage fails but DB might succeed.
       }
 
       const { error: dbError } = await supabase
@@ -254,7 +245,7 @@ export default function GalleryPage() {
         .match({ id: photo.id });
 
       if (dbError) {
-        throw dbError; // This will be caught by the outer catch block
+        throw dbError; 
       }
 
       setPhotos(prevPhotos => prevPhotos.filter(p => p.id !== photo.id));
@@ -263,7 +254,7 @@ export default function GalleryPage() {
       console.error("Error deleting photo:", error);
       toast({
         title: "Deletion Error",
-        description: error.message || "Could not delete photo. Check RLS policies for 'gallery_photos' (DELETE) and 'storage.objects' (DELETE for 'gallery-photos' bucket).",
+        description: error.message || "Could not delete photo. Check RLS policies for 'gallery_photos' (DELETE) and Storage Bucket Policies (DELETE for 'gallery-photos' bucket).",
         variant: "destructive",
         duration: 9000,
       });
@@ -276,7 +267,7 @@ export default function GalleryPage() {
     <PageContainer title="Our Photo Gallery">
       <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
         setIsDialogOpen(isOpen);
-        if (!isOpen) { // Reset form if dialog is closed for any reason
+        if (!isOpen) { 
           setSelectedFiles([]);
           setNewPhotoCaption("");
           if (fileInputRef.current) {
