@@ -31,6 +31,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config, { isServer }) => {
+    // Merge with existing externals, if any
+    config.externals = {
+      ...(config.externals || {}),
+      'socket.io': 'socket.io',
+    };
+    return config;
+  },
 };
 
 export default nextConfig;

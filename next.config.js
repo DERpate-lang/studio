@@ -1,3 +1,4 @@
+
 // next.config.js
 // This file is intentionally kept minimal to prefer next.config.ts.
 // All primary Next.js configuration should be managed in next.config.ts.
@@ -25,6 +26,14 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  webpack: (config) => {
+    // Merge with existing externals, if any
+    config.externals = {
+      ...(config.externals || {}),
+      'socket.io': 'socket.io',
+    };
+    return config;
   },
 };
 
