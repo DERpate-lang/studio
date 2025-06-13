@@ -32,10 +32,20 @@ const nextConfig: NextConfig = {
     ],
   },
   webpack: (config, { isServer }) => {
-    // Merge with existing externals, if any
+    let baseExternals: Record<string, any> = {};
+    if (Array.isArray(config.externals)) {
+      config.externals.forEach((val, idx) => {
+        if (val !== undefined && val !== null) { // Skip undefined/null
+          baseExternals[idx.toString()] = val;
+        }
+      });
+    } else if (config.externals && typeof config.externals === 'object') {
+      baseExternals = config.externals as Record<string, any>;
+    }
+    
     config.externals = {
-      ...(config.externals || {}),
-      'socket.io': 'socket.io',
+      ...baseExternals,
+      'socket.io': 'socket.io', // Ensure socket.io is present
     };
     return config;
   },

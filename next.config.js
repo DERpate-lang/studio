@@ -28,10 +28,20 @@ const nextConfig = {
     ],
   },
   webpack: (config) => {
-    // Merge with existing externals, if any
+    let baseExternals = {};
+    if (Array.isArray(config.externals)) {
+      config.externals.forEach((val, idx) => {
+        if (val !== undefined && val !== null) { // Skip undefined/null
+          baseExternals[idx.toString()] = val;
+        }
+      });
+    } else if (config.externals && typeof config.externals === 'object') {
+      baseExternals = config.externals;
+    }
+    
     config.externals = {
-      ...(config.externals || {}),
-      'socket.io': 'socket.io',
+      ...baseExternals,
+      'socket.io': 'socket.io', // Ensure socket.io is present
     };
     return config;
   },
