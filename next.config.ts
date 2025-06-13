@@ -32,21 +32,28 @@ const nextConfig: NextConfig = {
     ],
   },
   webpack: (config, { isServer }) => {
-    let baseExternals: Record<string, any> = {};
-    if (Array.isArray(config.externals)) {
-      config.externals.forEach((val, idx) => {
-        if (val !== undefined && val !== null) { // Skip undefined/null
-          baseExternals[idx.toString()] = val;
-        }
-      });
-    } else if (config.externals && typeof config.externals === 'object') {
-      baseExternals = config.externals as Record<string, any>;
+    // Ensure config.externals is initialized if not present, defaulting to an array.
+    if (!config.externals) {
+      config.externals = [];
     }
-    
-    config.externals = {
-      ...baseExternals,
-      'socket.io': 'socket.io', // Ensure socket.io is present
-    };
+
+    // Add socket.io to the externals.
+    // Next.js often uses an array for server-side externals.
+    if (Array.isArray(config.externals)) {
+      config.externals.push('socket.io');
+    } else if (typeof config.externals === 'object' && config.externals !== null) {
+      // If it's already an object, add to it.
+      (config.externals as Record<string, any>)['socket.io'] = 'socket.io';
+    } else {
+      // If it's a string, RegExp, or function, this might need specific handling.
+      // For now, attempting to add it as if it could be an array.
+      // This case might need adjustment based on the actual type of config.externals if it's not array/object.
+      // However, typical Next.js externals are arrays or objects.
+      // Fallback: Re-assign as an array with the original and new external.
+      const originalExternal = config.externals;
+      config.externals = [originalExternal, 'socket.io'].filter(Boolean); // filter(Boolean) to remove potential undefined/null from originalExternal if it was so
+    }
+
     return config;
   },
 };
